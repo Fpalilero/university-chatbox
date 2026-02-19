@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>University Chatbox</title>
+
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<div class="page-container">
+
+  <header>
+    <h1 class="header">Welcome To Rowan University Chatbox</h1>
+  </header>
+
+  <!-- Login page -->
+  <div id="Login" class="page">
+
+    <!-- Wrap inputs and login button in a form -->
+    <form id="loginForm">
+      <input type="text" id="email" placeholder="Enter Email" required>
+      <input type="password" id="password" placeholder="Enter Password" required>
+      <button type="submit" id="loginBtn">Login</button>
+    </form>
+
+    <!-- Error message -->
+    <p id="loginError" class="error"></p>
+
+    <!-- Forgot buttons -->
+    <div class="forgot-buttons">
+      <button type="button" id="forgotusernameBtn">Forgot Username?</button> 
+      <button type="button" id="forgotPasswordBtn">Forgot Password?</button>
+    </div>
+
+    <p id="forgotMessage" class="error"></p>
+
+  </div>
+
+</div>
+
+<!-- LOGIN SCRIPT -->
+<script>
+  const form = document.getElementById("loginForm");
+  const loginError = document.getElementById("loginError");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault(); // prevent page refresh
+
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+
+    loginError.style.color = "red";
+    loginError.textContent = "";
+
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        loginError.textContent = data.error || "Login failed";
+        return;
+      }
+
+      // Save JWT token
+      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("user_id", data.user_id);
+      localStorage.setItem("username", data.username);
+
+      loginError.style.color = "green";
+      loginError.textContent = "Login successful!";
+
+      console.log("Logged in:", data);
+
+      // Optional: redirect later
+      // window.location.href = "/chat.html";
+
+    } catch (err) {
+      loginError.textContent = "Server error. Is Flask running?";
+    }
+  });
+</script>
+
+</body>
+</html>

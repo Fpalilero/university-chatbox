@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Chat Dashboard</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="page-container">
+  <h1 class="header">Chat Dashboard</h1>
+
+  <p id="welcomeMessage"></p>
+
+  <button id="logoutBtn">Logout</button>
+</div>
+
+<script>
+  const token = localStorage.getItem("access_token");
+  const username = localStorage.getItem("username");
+
+  if (!token) {
+    // Not logged in → go back to login page
+    window.location.href = "/";
+  }
+
+  document.getElementById("welcomeMessage").textContent =
+    "Welcome, " + username + "!";
+
+  document.getElementById("logoutBtn").addEventListener("click", () => {
+    localStorage.clear();
+    window.location.href = "/";
+  });
+</script>
+
+</body>
+</html>
