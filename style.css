@@ -1,0 +1,85 @@
+ /* ----------------------------
+   General Page Styles
+---------------------------- */
+body {
+    font-family: Arial, sans-serif;
+    font-size: 18px;
+    background-color: #f0f8ff;  /* light blue background for visibility */
+    margin: 0;
+    padding: 0;
+}
+
+/* Container for all content */
+.page-container {
+    width: 500px;            /* narrow for a login page */
+    margin: 50px auto;       /* center horizontally and add top spacing */
+    padding: 30px;
+    background-color: #ffffff;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    border-radius: 8px;
+}
+
+/* Header */
+h1.header {
+    font-size: 32px;
+    text-align: center;
+    margin-bottom: 30px;
+    /* Gradient text */
+    background: linear-gradient(90deg, #ff7f50, #ff3333);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Inputs */
+input[type="text"],
+input[type="password"] {
+    width: 100%;
+    height: 40px;
+    padding: 8px 10px;
+    font-size: 16px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+/* Buttons */
+button {
+    width: 140px;
+    height: 35px;
+    font-size: 14px;
+    background-color: #ff7f50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: background-color 0.3s ease;
+}
+
+/* Hover effect */
+button:hover {
+    background-color: #ff3333;
+}
+
+/* Smaller "Forgot" buttons */
+#forgotusernameBtn,
+#forgotPasswordBtn {
+    width: 140px;
+    height: 35px;
+    font-size: 12px;
+    margin-top: 10px;
+}
+
+/* Container for Forgot buttons to align nicely */
+.forgot-buttons {
+    margin-top: 11px;
+}
+
+/* Error messages */
+.error {
+    color: red;
+    font-size: 14px;
+    margin-top: 10px;
+}
