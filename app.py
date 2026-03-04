@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timedelta, timezone
 
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, app, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_jwt_extended import (
     JWTManager, create_access_token,
@@ -28,9 +28,14 @@ def create_app():
     with app.app_context():
         db.create_all()
 
-    # -------------------------
-    # Frontend (serve index.html + style.css from project root)
-    # -------------------------
+    @app.get("/chat.html")
+    def serve_chat():
+        return send_from_directory(os.getcwd(), "chat.html")
+
+    @app.get("/script.js")
+    def serve_js():
+        return send_from_directory(os.getcwd(), "script.js")
+    
     @app.get("/")
     def serve_home():
         # Loads login page at http://127.0.0.1:5001/
