@@ -1,1 +1,2 @@
-Placeholder readme file for our project - will update
+This repository houses Group 1's University Chatbot as a part of our project
+in Professor Pierantozzi's Software Engineering course, Spring 2026
