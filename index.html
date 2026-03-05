@@ -1,91 +1,144 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>University Chatbox</title>
-
-<link rel="stylesheet" href="style.css">
-
+  <meta charset="UTF-8">
+  <title>University Chatbox</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
+  <div class="page-container">
+    <header>
+      <h1 class="header">Welcome To Rowan University Chatbox</h1>
+    </header>
 
-<div class="page-container">
+    <!-- Login page -->
+    <div id="Login" class="page">
 
-  <header>
-    <h1 class="header">Welcome To Rowan University Chatbox</h1>
-  </header>
+      <!-- Login form -->
+      <form id="loginForm">
+        <input type="text" id="email" placeholder="Enter Email" required>
+        <input type="password" id="password" placeholder="Enter Password" required>
 
-  <!-- Login page -->
-  <div id="Login" class="page">
+        <!-- Buttons -->
+        <button type="submit" id="loginBtn">Login</button>
+        <button type="button" id="registerBtn">Register</button>
+      </form>
 
-    <!-- Wrap inputs and login button in a form -->
-    <form id="loginForm">
-      <input type="text" id="email" placeholder="Enter Email" required>
-      <input type="password" id="password" placeholder="Enter Password" required>
-      <button type="submit" id="loginBtn">Login</button>
-    </form>
+      <!-- Error/Success message -->
+      <p id="loginError" class="error"></p>
 
-    <!-- Error message -->
-    <p id="loginError" class="error"></p>
+      <!-- Forgot buttons -->
+      <div class="forgot-buttons">
+        <button type="button" id="forgotusernameBtn">Forgot Username?</button>
+        <button type="button" id="forgotPasswordBtn">Forgot Password?</button>
+      </div>
 
-    <!-- Forgot buttons -->
-    <div class="forgot-buttons">
-      <button type="button" id="forgotusernameBtn">Forgot Username?</button> 
-      <button type="button" id="forgotPasswordBtn">Forgot Password?</button>
+      <p id="forgotMessage" class="error"></p>
     </div>
-
-    <p id="forgotMessage" class="error"></p>
-
   </div>
 
-</div>
+  <script>
+    const form = document.getElementById("loginForm");
+    const loginError = document.getElementById("loginError");
+    const registerBtn = document.getElementById("registerBtn");
 
-<!-- LOGIN SCRIPT -->
-<script>
-  const form = document.getElementById("loginForm");
-  const loginError = document.getElementById("loginError");
+    function requireRowanEmail(email) {
+      // Optional but recommended since your project requires @rowan.edu
+      return email.toLowerCase().endsWith("@rowan.edu");
+    }
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault(); // prevent page refresh
+    // -------------------
+    // LOGIN
+    // -------------------
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault(); // prevent page refresh
 
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value;
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
 
-    loginError.style.color = "red";
-    loginError.textContent = "";
+      loginError.style.color = "red";
+      loginError.textContent = "";
 
-    try {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        loginError.textContent = data.error || "Login failed";
+      if (!requireRowanEmail(email)) {
+        loginError.textContent = "Please use your @rowan.edu email.";
         return;
       }
 
-      // Save JWT token
-      localStorage.setItem("access_token", data.access_token);
-      localStorage.setItem("user_id", data.user_id);
-      localStorage.setItem("username", data.username);
+      try {
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
 
-      loginError.style.color = "green";
-      loginError.textContent = "Login successful!";
+        const data = await res.json();
 
-      console.log("Logged in:", data);
+        if (!res.ok) {
+          loginError.textContent = data.error || "Login failed";
+          return;
+        }
 
-      window.location.href = "/chat.html";
+        // Save JWT token
+        localStorage.setItem("access_token", data.access_token);
+        localStorage.setItem("user_id", data.user_id);
+        localStorage.setItem("username", data.username);
 
-    } catch (err) {
-      loginError.textContent = "Server error. Is Flask running?";
-    }
-  });
-</script>
+        loginError.style.color = "green";
+        loginError.textContent = "Login successful!";
 
+        // Go to chat
+        window.location.href = "/chat.html";
+
+      } catch (err) {
+        loginError.textContent = "Server error. Is Flask running?";
+      }
+    });
+
+    // -------------------
+    // REGISTER
+    // -------------------
+    registerBtn.addEventListener("click", async () => {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      loginError.style.color = "red";
+      loginError.textContent = "";
+
+      if (!email || !password) {
+        loginError.textContent = "Enter email and password first.";
+        return;
+      }
+
+      if (!requireRowanEmail(email)) {
+        loginError.textContent = "Registration requires a @rowan.edu email.";
+        return;
+      }
+
+      // Simple username from email prefix
+      const username = email.split("@")[0];
+
+      try {
+        const res = await fetch("/api/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, email, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          loginError.textContent = data.error || "Registration failed";
+          return;
+        }
+
+        loginError.style.color = "green";
+        loginError.textContent = "Registration successful! Now click Login.";
+
+      } catch (err) {
+        loginError.textContent = "Server error during registration.";
+      }
+    });
+  </script>
 </body>
 </html>
