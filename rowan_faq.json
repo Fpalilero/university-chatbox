@@ -1,0 +1,70 @@
+[
+  {
+    "intent": "registration",
+    "keywords": [
+      "register",
+      "registration",
+      "registrar",
+      "classes",
+      "class registration",
+      "self-service banner",
+      "banner"
+    ],
+    "answer": "Rowan course registration is completed online through Self-Service Banner during the registration period. For Registration & Records help, contact the Registrar at registrar@rowan.edu or 856-256-4360."
+  },
+  {
+    "intent": "registrar_hours",
+    "keywords": [
+      "registrar hours",
+      "office hours",
+      "when is registrar open"
+    ],
+    "answer": "The Registrar's office is open for in-person needs Monday through Friday, 8:00 a.m. to 4:30 p.m."
+  },
+  {
+    "intent": "advising",
+    "keywords": [
+      "advisor",
+      "advising",
+      "academic advising",
+      "meet with advisor",
+      "appointment with advisor"
+    ],
+    "answer": "For general advising questions, contact advise@rowan.edu. To set up an appointment with an advisor, call the ACE Center at 856-256-4459 or use Rowan Success Network."
+  },
+  {
+    "intent": "financial_aid",
+    "keywords": [
+      "financial aid",
+      "fafsa",
+      "aid",
+      "scholarship",
+      "grant",
+      "loan"
+    ],
+    "answer": "For Financial Aid help, contact financialaid@rowan.edu. Rowan also offers ASK SUSAN for many financial-aid questions."
+  },
+  {
+    "intent": "bursar",
+    "keywords": [
+      "bursar",
+      "bill",
+      "billing",
+      "payment",
+      "refund",
+      "tuition balance",
+      "pay tuition"
+    ],
+    "answer": "For billing and account questions, contact the Bursar's Office at bursar@rowan.edu or 856-256-4150."
+  },
+  {
+    "intent": "transcripts",
+    "keywords": [
+      "transcript",
+      "official transcript",
+      "unofficial transcript",
+      "enrollment verification"
+    ],
+    "answer": "Official transcripts can be requested through Student Self-Service Banner or through the National Student Clearinghouse. For transcript or records help, contact registrar@rowan.edu."
+  }
+]
