@@ -1,4 +1,4 @@
-const API_BASE = "http://127.0.0.1:5001";
+const API_BASE = "";
 
 const chatForm = document.getElementById("chatForm");
 const chatInput = document.getElementById("chatInput");
@@ -6,7 +6,6 @@ const chatMessages = document.getElementById("chatMessages");
 const chatError = document.getElementById("chatError");
 const logoutBtn = document.getElementById("logoutBtn");
 
-// IMPORTANT: your login stores access_token/user_id/username (not "token")
 const token = localStorage.getItem("access_token");
 const userId = localStorage.getItem("user_id");
 
@@ -52,26 +51,41 @@ async function getOrCreateConversation() {
   const createRes = await fetch(`${API_BASE}/api/conversations`, {
     method: "POST",
     headers: authHeaders(),
-    body: JSON.stringify({ type: "group", name: "General", member_ids: [] }),
+    body: JSON.stringify({
+      type: "group",
+      name: "General",
+      member_ids: []
+    }),
   });
 
   const created = await createRes.json();
+
+  if (!createRes.ok) {
+    chatError.textContent = created.error || "Failed to create conversation";
+    return null;
+  }
+
   return created.conversation_id;
 }
 
 async function loadMessages() {
-  const res = await fetch(`${API_BASE}/api/messages?conversation_id=${conversationId}`, {
-    method: "GET",
-    headers: authHeaders(),
-  });
+  const res = await fetch(
+    `${API_BASE}/api/messages?conversation_id=${conversationId}`,
+    {
+      method: "GET",
+      headers: authHeaders(),
+    }
+  );
 
   const data = await res.json();
+
   if (!res.ok) {
     chatError.textContent = data.error || "Failed to load messages";
     return;
   }
 
   chatMessages.innerHTML = "";
+
   for (const m of data) {
     const role = String(m.sender_user_id) === String(userId) ? "user" : "bot";
     addMessage(role, m.content ?? "[deleted]");
@@ -85,13 +99,11 @@ chatForm.addEventListener("submit", async (e) => {
   const msg = chatInput.value.trim();
   if (!msg) return;
 
-  // If conversationId is missing, the backend will throw your error
   if (!conversationId) {
     chatError.textContent = "No conversation loaded yet. Refresh the page.";
     return;
   }
 
-  addMessage("user", msg);
   chatInput.value = "";
 
   const res = await fetch(`${API_BASE}/api/messages`, {
@@ -99,7 +111,7 @@ chatForm.addEventListener("submit", async (e) => {
     headers: authHeaders(),
     body: JSON.stringify({
       conversation_id: conversationId,
-      content: msg
+      content: msg,
     }),
   });
 
@@ -120,5 +132,7 @@ logoutBtn.addEventListener("click", () => {
 
 (async function init() {
   conversationId = await getOrCreateConversation();
-  if (conversationId) await loadMessages();
+  if (conversationId) {
+    await loadMessages();
+  }
 })();

@@ -1,55 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Chat Dashboard</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>University Chatbox</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
+  <div class="page-container">
+    <header class="chat-header">
+      <h1 class="header">University Chatbox</h1>
+      <button id="logoutBtn" type="button">Logout</button>
+    </header>
 
-<div class="page-container">
-  <header class="chat-header">
-    <h1 class="header">University Chatbox</h1>
-    <button id="logoutBtn" type="button">Logout</button>
-  </header>
+    <div id="chatMessages" class="chat-messages"></div>
 
-  <div id="chatMessages" class="chat-messages"></div>
+    <form id="chatForm" class="chat-input">
+      <input
+        id="chatInput"
+        type="text"
+        placeholder="Type a message..."
+        autocomplete="off"
+        required
+      />
+      <button type="submit">Send</button>
+    </form>
 
-  <form id="chatForm" class="chat-input">
-    <input id="chatInput" type="text" placeholder="Type a message..." autocomplete="off" required /> 
-    <<button type="submit">Send</button>
-  </form>
+    <p id="chatError" class="error"></p>
+  </div>
 
-  <p id="chatError" class="error"></p>
-</div>
-
-<script src="/script.js"></script>
-
-  <h1 class="header">Chat Dashboard</h1>
-
-  <p id="welcomeMessage"></p>
-
-  <button id="logoutBtn">Logout</button>
-</div>
-
-<script>
-  const token = localStorage.getItem("access_token");
-  const username = localStorage.getItem("username");
-
-  if (!token) {
-    // Not logged in → go back to login page
-    window.location.href = "/";
-  }
-
-  document.getElementById("welcomeMessage").textContent =
-    "Welcome, " + username + "!";
-
-  document.getElementById("logoutBtn").addEventListener("click", () => {
-    localStorage.clear();
-    window.location.href = "/";
-  });
-</script>
-
+  <script src="/script.js"></script>
 </body>
 </html>

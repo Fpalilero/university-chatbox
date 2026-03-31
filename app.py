@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timedelta, timezone
 
-from flask import Flask, app, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_jwt_extended import (
     JWTManager, create_access_token,
@@ -15,10 +15,20 @@ from models import db, User, Conversation, ConversationMember, Message
 load_dotenv()
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder=".", static_url_path="")
     CORS(app)
 
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///chatbox.db")
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        # local fallback if postgres is not set yet
+        database_url = "sqlite:///chatbox.db"
+
+    # some hosts give postgres://, SQLAlchemy wants postgresql://
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+    print("USING DATABASE:", database_url)
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET", "dev-secret-change-me")
 
@@ -28,22 +38,21 @@ def create_app():
     with app.app_context():
         db.create_all()
 
+    @app.get("/")
+    def serve_home():
+        return send_from_directory(os.getcwd(), "index.html")
+
     @app.get("/chat.html")
     def serve_chat():
         return send_from_directory(os.getcwd(), "chat.html")
 
-    @app.get("/script.js")
-    def serve_js():
-        return send_from_directory(os.getcwd(), "script.js")
-    
-    @app.get("/")
-    def serve_home():
-        # Loads login page at http://127.0.0.1:5001/
-        return send_from_directory(os.getcwd(), "index.html")
-
     @app.get("/index.html")
     def serve_index():
         return send_from_directory(os.getcwd(), "index.html")
+
+    @app.get("/script.js")
+    def serve_js():
+        return send_from_directory(os.getcwd(), "script.js")
 
     @app.get("/style.css")
     def serve_css():
@@ -53,9 +62,6 @@ def create_app():
     def favicon():
         return "", 204
 
-    # -------------------------
-    # Helpers
-    # -------------------------
     def utcnow():
         return datetime.now(timezone.utc)
 
@@ -67,9 +73,6 @@ def create_app():
             is not None
         )
 
-    # -------------------------
-    # Auth
-    # -------------------------
     @app.post("/api/register")
     def register():
         data = request.get_json() or {}
@@ -79,6 +82,9 @@ def create_app():
 
         if not username or not email or not password:
             return jsonify({"error": "username, email, and password are required"}), 400
+
+        if not email.endswith("@rowan.edu"):
+            return jsonify({"error": "registration requires a @rowan.edu email"}), 400
 
         if User.query.filter((User.username == username) | (User.email == email)).first():
             return jsonify({"error": "username or email already exists"}), 409
@@ -104,11 +110,12 @@ def create_app():
             return jsonify({"error": "invalid credentials"}), 401
 
         token = create_access_token(identity=str(user.id), expires_delta=timedelta(hours=8))
-        return jsonify({"access_token": token, "user_id": user.id, "username": user.username})
+        return jsonify({
+            "access_token": token,
+            "user_id": user.id,
+            "username": user.username
+        })
 
-    # -------------------------
-    # Conversations
-    # -------------------------
     @app.get("/api/conversations")
     @jwt_required()
     def my_conversations():
@@ -130,11 +137,6 @@ def create_app():
     @app.post("/api/conversations")
     @jwt_required()
     def create_conversation():
-        """
-        Create a conversation and add members.
-        Body:
-          { "type": "direct"|"group", "name": "...optional...", "member_ids": [2,3] }
-        """
         user_id = int(get_jwt_identity())
         data = request.get_json() or {}
 
@@ -145,12 +147,11 @@ def create_app():
         if ctype not in ("direct", "group"):
             return jsonify({"error": "type must be 'direct' or 'group'"}), 400
 
-        # Ensure creator is included
         all_members = set([user_id] + [int(x) for x in member_ids])
 
         convo = Conversation(type=ctype, name=name if ctype == "group" else None)
         db.session.add(convo)
-        db.session.flush()  # gives convo.id before commit
+        db.session.flush()
 
         for uid in all_members:
             db.session.add(ConversationMember(
@@ -167,15 +168,9 @@ def create_app():
             "name": convo.name
         }), 201
 
-    # -------------------------
-    # Messages
-    # -------------------------
     @app.get("/api/messages")
     @jwt_required()
     def get_messages():
-        """
-        Query param: conversation_id
-        """
         user_id = int(get_jwt_identity())
         conversation_id = request.args.get("conversation_id", type=int)
 
@@ -234,10 +229,6 @@ def create_app():
     @app.put("/api/messages/<int:message_id>")
     @jwt_required()
     def edit_message(message_id: int):
-        """
-        Edit only if sender AND within 5 minutes.
-        Body: { "content": "new text" }
-        """
         user_id = int(get_jwt_identity())
         data = request.get_json() or {}
         new_content = (data.get("content") or "").strip()
@@ -253,7 +244,6 @@ def create_app():
         if msg.deleted_at:
             return jsonify({"error": "cannot edit deleted message"}), 400
 
-        # 5-minute rule (use UTC comparison)
         created = msg.created_at.replace(tzinfo=timezone.utc) if msg.created_at.tzinfo is None else msg.created_at
         if utcnow() > created + timedelta(minutes=5):
             return jsonify({"error": "edit window expired (5 minutes)"}), 403
@@ -266,9 +256,6 @@ def create_app():
     @app.delete("/api/messages/<int:message_id>")
     @jwt_required()
     def delete_message(message_id: int):
-        """
-        Soft delete only if sender AND within 5 minutes.
-        """
         user_id = int(get_jwt_identity())
         msg = Message.query.get_or_404(message_id)
 
@@ -288,13 +275,7 @@ def create_app():
 
     return app
 
-
 if __name__ == "__main__":
     app = create_app()
-    app.run(debug=True, host="0.0.0.0", port=5001)
-
-
-
-
-
-
+    port = int(os.getenv("PORT", 5001))
+    app.run(debug=True, host="0.0.0.0", port=port)

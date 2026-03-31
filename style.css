@@ -26,6 +26,7 @@ h1.header {
     margin-bottom: 30px;
     /* Gradient text */
     background: linear-gradient(90deg, #ff7f50, #ff3333);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
@@ -125,4 +126,16 @@ button:hover {
 .chat-input input {
   flex: 1;
   padding: 10px;
+}
+.chat-input button {
+  width: auto;
+  min-width: 90px;
+}
+
+#chatInput {
+  margin-bottom: 0;
+}
+
+.chat-messages {
+  border-radius: 8px;
 }

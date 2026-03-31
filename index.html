@@ -5,30 +5,23 @@
   <title>University Chatbox</title>
   <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
   <div class="page-container">
     <header>
       <h1 class="header">Welcome To Rowan University Chatbox</h1>
     </header>
 
-    <!-- Login page -->
     <div id="Login" class="page">
-
-      <!-- Login form -->
       <form id="loginForm">
         <input type="text" id="email" placeholder="Enter Email" required>
         <input type="password" id="password" placeholder="Enter Password" required>
 
-        <!-- Buttons -->
         <button type="submit" id="loginBtn">Login</button>
         <button type="button" id="registerBtn">Register</button>
       </form>
 
-      <!-- Error/Success message -->
       <p id="loginError" class="error"></p>
 
-      <!-- Forgot buttons -->
       <div class="forgot-buttons">
         <button type="button" id="forgotusernameBtn">Forgot Username?</button>
         <button type="button" id="forgotPasswordBtn">Forgot Password?</button>
@@ -44,15 +37,11 @@
     const registerBtn = document.getElementById("registerBtn");
 
     function requireRowanEmail(email) {
-      // Optional but recommended since your project requires @rowan.edu
       return email.toLowerCase().endsWith("@rowan.edu");
     }
 
-    // -------------------
-    // LOGIN
-    // -------------------
     form.addEventListener("submit", async (e) => {
-      e.preventDefault(); // prevent page refresh
+      e.preventDefault();
 
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value;
@@ -79,7 +68,6 @@
           return;
         }
 
-        // Save JWT token
         localStorage.setItem("access_token", data.access_token);
         localStorage.setItem("user_id", data.user_id);
         localStorage.setItem("username", data.username);
@@ -87,17 +75,12 @@
         loginError.style.color = "green";
         loginError.textContent = "Login successful!";
 
-        // Go to chat
         window.location.href = "/chat.html";
-
       } catch (err) {
-        loginError.textContent = "Server error. Is Flask running?";
+        loginError.textContent = "Server error. Is the backend running?";
       }
     });
 
-    // -------------------
-    // REGISTER
-    // -------------------
     registerBtn.addEventListener("click", async () => {
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value;
@@ -115,7 +98,6 @@
         return;
       }
 
-      // Simple username from email prefix
       const username = email.split("@")[0];
 
       try {
@@ -134,7 +116,6 @@
 
         loginError.style.color = "green";
         loginError.textContent = "Registration successful! Now click Login.";
-
       } catch (err) {
         loginError.textContent = "Server error during registration.";
       }
