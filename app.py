@@ -10,6 +10,7 @@ from flask_jwt_extended import (
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 from groq import Groq
+from sqlalchemy import or_
 
 from models import db, User, Conversation, ConversationMember, Message
 
@@ -37,9 +38,6 @@ def create_app():
     groq_api_key = os.getenv("GROQ_API_KEY")
     groq_client = Groq(api_key=groq_api_key) if groq_api_key else None
 
-    # -------------------------
-    # Static files
-    # -------------------------
     @app.get("/")
     def serve_home():
         return send_from_directory(os.getcwd(), "index.html")
@@ -79,14 +77,41 @@ def create_app():
         )
 
     def get_or_create_rowan_bot():
-        try:
-            bot = User.query.filter_by(email="rowanbot@rowan.edu").first()
-            if bot:
-                return bot
+        bot_username = "RowanBot"
+        bot_email = "rowanbot@rowan.edu"
 
+        try:
+            # First try exact email or username match
+            existing_bot = User.query.filter(
+                or_(User.email == bot_email, User.username == bot_username)
+            ).first()
+
+            if existing_bot:
+                changed = False
+
+                if existing_bot.username != bot_username:
+                    existing_bot.username = bot_username
+                    changed = True
+
+                if existing_bot.email != bot_email:
+                    # only set the email if no one else is already using it
+                    email_owner = User.query.filter(
+                        User.email == bot_email,
+                        User.id != existing_bot.id
+                    ).first()
+                    if not email_owner:
+                        existing_bot.email = bot_email
+                        changed = True
+
+                if changed:
+                    db.session.commit()
+
+                return existing_bot
+
+            # Otherwise create it
             bot = User(
-                username="RowanBot",
-                email="rowanbot@rowan.edu",
+                username=bot_username,
+                email=bot_email,
                 password_hash=generate_password_hash("rowan-bot-internal")
             )
             db.session.add(bot)
@@ -95,8 +120,17 @@ def create_app():
 
         except Exception as e:
             db.session.rollback()
-            print("BOT CREATION RACE CONDITION:", str(e))
-            return User.query.filter_by(email="rowanbot@rowan.edu").first()
+            print("GET OR CREATE ROWAN BOT ERROR:", str(e))
+
+            # Try one more time after rollback
+            fallback_bot = User.query.filter(
+                or_(User.email == bot_email, User.username == bot_username)
+            ).first()
+
+            if fallback_bot:
+                return fallback_bot
+
+            return None
 
     def get_conversation_history(conversation_id: int, bot_user_id: int, limit: int = 12):
         messages = (
