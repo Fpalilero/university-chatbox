@@ -126,6 +126,13 @@ async function getOrCreateConversation() {
       headers: authHeaders()
     });
 
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const text = await res.text();
+      console.error("Conversations non-JSON response:", text);
+      throw new Error("Server returned HTML when loading conversations.");
+    }
+
     if (res.status === 401) {
       localStorage.clear();
       window.location.href = "/";
@@ -133,6 +140,10 @@ async function getOrCreateConversation() {
     }
 
     const convos = await res.json();
+
+    if (!res.ok) {
+      throw new Error(convos.details || convos.error || "Failed to load conversations");
+    }
 
     if (Array.isArray(convos) && convos.length > 0) {
       return convos[0].conversation_id;
@@ -148,16 +159,22 @@ async function getOrCreateConversation() {
       })
     });
 
+    const createContentType = createRes.headers.get("content-type") || "";
+    if (!createContentType.includes("application/json")) {
+      const text = await createRes.text();
+      console.error("Create conversation non-JSON response:", text);
+      throw new Error("Server returned HTML when creating a conversation.");
+    }
+
     const created = await createRes.json();
 
     if (!createRes.ok) {
-      chatError.textContent = created.error || "Failed to create conversation";
-      return null;
+      throw new Error(created.details || created.error || "Failed to create conversation");
     }
 
     return created.conversation_id;
   } catch (error) {
-    chatError.textContent = "Could not connect to the server.";
+    chatError.textContent = error.message || "Could not connect to the server.";
     return null;
   }
 }
@@ -174,15 +191,14 @@ async function loadMessages() {
     const contentType = res.headers.get("content-type") || "";
     if (!contentType.includes("application/json")) {
       const text = await res.text();
-      console.error(text);
-      throw new Error("Server returned HTML instead of JSON.");
+      console.error("Messages non-JSON response:", text);
+      throw new Error("Server returned HTML instead of JSON while loading messages.");
     }
 
     const data = await res.json();
 
     if (!res.ok) {
-      chatError.textContent = data.error || "Failed to load messages";
-      return;
+      throw new Error(data.details || data.error || "Failed to load messages");
     }
 
     chatMessages.innerHTML = "";
@@ -211,14 +227,15 @@ async function sendMessage(messageText) {
   const contentType = res.headers.get("content-type") || "";
   if (!contentType.includes("application/json")) {
     const text = await res.text();
-    console.error(text);
+    console.error("Send message non-JSON response:", text);
     throw new Error("Server returned HTML instead of JSON. Check Render logs.");
   }
 
   const data = await res.json();
 
   if (!res.ok) {
-    throw new Error(data.error || "Failed to send message");
+    console.error("Backend JSON error:", data);
+    throw new Error(data.details || data.error || "Failed to send message");
   }
 
   return data;
@@ -246,7 +263,6 @@ chatForm.addEventListener("submit", async (e) => {
     const data = await sendMessage(msg);
 
     await sleep(700);
-
     removeTypingIndicator();
 
     if (data.bot_message && data.bot_message.content) {
