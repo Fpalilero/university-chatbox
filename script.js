@@ -52,7 +52,7 @@ function setGreeting() {
   else greeting = "Good evening";
 
   welcomeMessage.textContent =
-    `${greeting}, ${username}. Welcome to Rowan University. How can I assist you today?`;
+    `${greeting}! Welcome to Rowan University. How can I assist you today?`;
 }
 
 function scrollToBottom(smooth = true) {
