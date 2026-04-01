@@ -171,6 +171,13 @@ async function loadMessages() {
       headers: authHeaders()
     });
 
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const text = await res.text();
+      console.error(text);
+      throw new Error("Server returned HTML instead of JSON.");
+    }
+
     const data = await res.json();
 
     if (!res.ok) {
@@ -187,7 +194,7 @@ async function loadMessages() {
 
     scrollToBottom(false);
   } catch (error) {
-    chatError.textContent = "Could not load messages.";
+    chatError.textContent = error.message || "Could not load messages.";
   }
 }
 
@@ -200,6 +207,13 @@ async function sendMessage(messageText) {
       content: messageText
     })
   });
+
+  const contentType = res.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    const text = await res.text();
+    console.error(text);
+    throw new Error("Server returned HTML instead of JSON. Check Render logs.");
+  }
 
   const data = await res.json();
 

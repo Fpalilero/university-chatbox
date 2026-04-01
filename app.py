@@ -22,7 +22,11 @@ def create_app():
     app = Flask(__name__)
     CORS(app)
 
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///chatbox.db")
+    database_url = os.getenv("DATABASE_URL", "sqlite:///chatbox.db")
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET", "dev-secret-change-me")
 
@@ -34,6 +38,9 @@ def create_app():
 
     groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
+    # -------------------------
+    # Static pages
+    # -------------------------
     @app.get("/chat.html")
     def serve_chat():
         return send_from_directory(os.getcwd(), "chat.html")
@@ -58,6 +65,9 @@ def create_app():
     def favicon():
         return "", 204
 
+    # -------------------------
+    # Helpers
+    # -------------------------
     def utcnow():
         return datetime.now(timezone.utc)
 
@@ -69,7 +79,21 @@ def create_app():
             is not None
         )
 
-    def get_conversation_history(conversation_id: int, limit: int = 12):
+    def get_or_create_rowan_bot():
+        bot = User.query.filter_by(email="rowanbot@rowan.edu").first()
+        if bot:
+            return bot
+
+        bot = User(
+            username="RowanBot",
+            email="rowanbot@rowan.edu",
+            password_hash=generate_password_hash("rowan-bot-internal")
+        )
+        db.session.add(bot)
+        db.session.commit()
+        return bot
+
+    def get_conversation_history(conversation_id: int, bot_user_id: int, limit: int = 12):
         messages = (
             Message.query
             .filter_by(conversation_id=conversation_id)
@@ -82,7 +106,7 @@ def create_app():
             if m.deleted_at or not m.content:
                 continue
 
-            role = "assistant" if m.sender_user_id == 0 else "user"
+            role = "assistant" if m.sender_user_id == bot_user_id else "user"
             history.append({
                 "role": role,
                 "content": m.content
@@ -92,15 +116,16 @@ def create_app():
 
     def generate_rowan_reply(user_message: str, conversation_id: int) -> str:
         if not groq_client:
-            return "Groq is not connected yet. Please add your GROQ_API_KEY in the .env file."
+            return "Groq is not connected yet. Please add your GROQ_API_KEY in the environment variables."
 
-        history = get_conversation_history(conversation_id, limit=10)
+        bot_user = get_or_create_rowan_bot()
+        history = get_conversation_history(conversation_id, bot_user.id, limit=10)
 
         system_prompt = (
             "You are Rowan, a friendly university chatbot for Rowan University students. "
-            "Keep responses clear, supportive, and concise. "
-            "If you are unsure about a Rowan-specific fact, say so instead of inventing details. "
-            "For casual conversation, be warm and professional."
+            "Be helpful, clear, and concise. "
+            "Use a warm but professional tone. "
+            "If you do not know a Rowan-specific fact, say you are not sure instead of making it up."
         )
 
         try:
@@ -121,6 +146,9 @@ def create_app():
             print("Groq error:", e)
             return "Sorry, I had trouble generating a response right now."
 
+    # -------------------------
+    # Auth
+    # -------------------------
     @app.post("/api/register")
     def register():
         data = request.get_json() or {}
@@ -134,7 +162,10 @@ def create_app():
         if not email.endswith("@rowan.edu"):
             return jsonify({"error": "registration requires a @rowan.edu email"}), 400
 
-        if User.query.filter((User.username == username) | (User.email == email)).first():
+        existing = User.query.filter(
+            (User.username == username) | (User.email == email)
+        ).first()
+        if existing:
             return jsonify({"error": "username or email already exists"}), 409
 
         user = User(
@@ -164,6 +195,9 @@ def create_app():
             "username": user.username
         })
 
+    # -------------------------
+    # Conversations
+    # -------------------------
     @app.get("/api/conversations")
     @jwt_required()
     def my_conversations():
@@ -175,6 +209,7 @@ def create_app():
             .order_by(Conversation.created_at.desc())
             .all()
         )
+
         return jsonify([{
             "conversation_id": c.id,
             "type": c.type,
@@ -216,6 +251,9 @@ def create_app():
             "name": convo.name
         }), 201
 
+    # -------------------------
+    # Messages
+    # -------------------------
     @app.get("/api/messages")
     @jwt_required()
     def get_messages():
@@ -261,6 +299,7 @@ def create_app():
         if not is_member(user_id, conversation_id):
             return jsonify({"error": "not a member of this conversation"}), 403
 
+        # Save user's message
         user_msg = Message(
             conversation_id=conversation_id,
             sender_user_id=user_id,
@@ -269,11 +308,14 @@ def create_app():
         db.session.add(user_msg)
         db.session.commit()
 
+        # Generate AI reply
         ai_reply = generate_rowan_reply(content, conversation_id)
+        bot_user = get_or_create_rowan_bot()
 
+        # Save bot message
         bot_msg = Message(
             conversation_id=conversation_id,
-            sender_user_id=0,
+            sender_user_id=bot_user.id,
             content=ai_reply,
         )
         db.session.add(bot_msg)
@@ -281,13 +323,13 @@ def create_app():
 
         return jsonify({
             "message_id": user_msg.id,
+            "created_at": user_msg.created_at.isoformat(),
             "bot_message": {
                 "message_id": bot_msg.id,
-                "sender_user_id": 0,
+                "sender_user_id": bot_msg.sender_user_id,
                 "content": bot_msg.content,
                 "created_at": bot_msg.created_at.isoformat()
-            },
-            "created_at": user_msg.created_at.isoformat()
+            }
         }), 201
 
     @app.put("/api/messages/<int:message_id>")
