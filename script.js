@@ -5,9 +5,30 @@ const chatInput = document.getElementById("chatInput");
 const chatMessages = document.getElementById("chatMessages");
 const chatError = document.getElementById("chatError");
 const logoutBtn = document.getElementById("logoutBtn");
+const welcomeMessage = document.getElementById("welcomeMessage");
 
 const token = localStorage.getItem("access_token");
 const userId = localStorage.getItem("user_id");
+
+function getSavedUsername() {
+  const raw = localStorage.getItem("username");
+
+  if (!raw) return "Student";
+
+  const cleaned = raw.trim();
+  if (
+    cleaned === "" ||
+    cleaned.toLowerCase() === "undefined" ||
+    cleaned.toLowerCase() === "null"
+  ) {
+    return "Student";
+  }
+
+  return cleaned;
+}
+
+const username = getSavedUsername();
+let conversationId = null;
 
 if (!token) {
   window.location.href = "/";
@@ -16,53 +37,93 @@ if (!token) {
 function authHeaders() {
   return {
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${token}`,
+    "Authorization": `Bearer ${token}`
   };
 }
 
-function addMessage(role, text) {
+function setGreeting() {
+  if (!welcomeMessage) return;
+
+  const hour = new Date().getHours();
+  let greeting = "Hello";
+
+  if (hour < 12) greeting = "Good morning";
+  else if (hour < 18) greeting = "Good afternoon";
+  else greeting = "Good evening";
+
+  welcomeMessage.textContent =
+    `${greeting}, ${username}. Welcome to Rowan University. How can I assist you today?`;
+}
+
+function scrollToBottom(smooth = true) {
+  chatMessages.scrollTo({
+    top: chatMessages.scrollHeight,
+    behavior: smooth ? "smooth" : "auto"
+  });
+}
+
+function addMessage(role, text, animated = true) {
   const bubble = document.createElement("div");
   bubble.className = role === "user" ? "msg msg-user" : "msg msg-bot";
+
+  if (animated) {
+    bubble.classList.add("msg-enter");
+  }
+
   bubble.textContent = text;
   chatMessages.appendChild(bubble);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-  return bubble;
+
+  if (animated) {
+    requestAnimationFrame(() => {
+      bubble.classList.add("msg-show");
+    });
+  }
+
+  scrollToBottom(true);
 }
 
-function clearMessages() {
-  chatMessages.innerHTML = "";
-}
+function createTypingIndicator() {
+  removeTypingIndicator();
 
-let typingBubble = null;
+  const typingBubble = document.createElement("div");
+  typingBubble.className = "msg msg-bot typing-indicator msg-enter";
+  typingBubble.id = "typingIndicator";
 
-function showTypingIndicator() {
-  if (typingBubble) return;
+  const typingText = document.createElement("span");
+  typingText.textContent = "Rowan is typing";
 
-  typingBubble = document.createElement("div");
-  typingBubble.className = "msg msg-bot";
-  typingBubble.textContent = "RowanBot is typing...";
+  const dots = document.createElement("span");
+  dots.className = "typing-dots";
+  dots.innerHTML = "<span>.</span><span>.</span><span>.</span>";
+
+  typingBubble.appendChild(typingText);
+  typingBubble.appendChild(dots);
+
   chatMessages.appendChild(typingBubble);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  requestAnimationFrame(() => {
+    typingBubble.classList.add("msg-show");
+  });
+
+  scrollToBottom(true);
 }
 
-function hideTypingIndicator() {
-  if (typingBubble) {
-    typingBubble.remove();
-    typingBubble = null;
+function removeTypingIndicator() {
+  const existing = document.getElementById("typingIndicator");
+  if (existing) {
+    existing.remove();
   }
 }
 
 function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
-
-let conversationId = null;
 
 async function getOrCreateConversation() {
   try {
     const res = await fetch(`${API_BASE}/api/conversations`, {
       method: "GET",
-      headers: authHeaders(),
+      headers: authHeaders()
     });
 
     if (res.status === 401) {
@@ -72,11 +133,6 @@ async function getOrCreateConversation() {
     }
 
     const convos = await res.json();
-
-    if (!res.ok) {
-      chatError.textContent = convos.error || "Failed to load conversations";
-      return null;
-    }
 
     if (Array.isArray(convos) && convos.length > 0) {
       return convos[0].conversation_id;
@@ -89,7 +145,7 @@ async function getOrCreateConversation() {
         type: "group",
         name: "General",
         member_ids: []
-      }),
+      })
     });
 
     const created = await createRes.json();
@@ -100,8 +156,8 @@ async function getOrCreateConversation() {
     }
 
     return created.conversation_id;
-  } catch (err) {
-    chatError.textContent = "Server error while loading conversation.";
+  } catch (error) {
+    chatError.textContent = "Could not connect to the server.";
     return null;
   }
 }
@@ -110,19 +166,10 @@ async function loadMessages() {
   if (!conversationId) return;
 
   try {
-    const res = await fetch(
-      `${API_BASE}/api/messages?conversation_id=${conversationId}`,
-      {
-        method: "GET",
-        headers: authHeaders(),
-      }
-    );
-
-    if (res.status === 401) {
-      localStorage.clear();
-      window.location.href = "/";
-      return;
-    }
+    const res = await fetch(`${API_BASE}/api/messages?conversation_id=${conversationId}`, {
+      method: "GET",
+      headers: authHeaders()
+    });
 
     const data = await res.json();
 
@@ -131,15 +178,36 @@ async function loadMessages() {
       return;
     }
 
-    clearMessages();
+    chatMessages.innerHTML = "";
 
-    for (const m of data) {
-      const role = String(m.sender_user_id) === String(userId) ? "user" : "bot";
-      addMessage(role, m.content ?? "[deleted]");
+    for (const message of data) {
+      const role = String(message.sender_user_id) === String(userId) ? "user" : "bot";
+      addMessage(role, message.content ?? "[deleted]", false);
     }
-  } catch (err) {
-    chatError.textContent = "Server error while loading messages.";
+
+    scrollToBottom(false);
+  } catch (error) {
+    chatError.textContent = "Could not load messages.";
   }
+}
+
+async function sendMessage(messageText) {
+  const res = await fetch(`${API_BASE}/api/messages`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({
+      conversation_id: conversationId,
+      content: messageText
+    })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to send message");
+  }
+
+  return data;
 }
 
 chatForm.addEventListener("submit", async (e) => {
@@ -154,52 +222,28 @@ chatForm.addEventListener("submit", async (e) => {
     return;
   }
 
-  addMessage("user", msg);
+  addMessage("user", msg, true);
   chatInput.value = "";
-  chatInput.focus();
+  chatInput.disabled = true;
 
-  showTypingIndicator();
-  const typingStartedAt = Date.now();
+  createTypingIndicator();
 
   try {
-    const res = await fetch(`${API_BASE}/api/messages`, {
-      method: "POST",
-      headers: authHeaders(),
-      body: JSON.stringify({
-        conversation_id: conversationId,
-        content: msg,
-      }),
-    });
+    const data = await sendMessage(msg);
 
-    const data = await res.json();
+    await sleep(700);
 
-    const elapsed = Date.now() - typingStartedAt;
-    const minTypingTime = 900;
+    removeTypingIndicator();
 
-    if (elapsed < minTypingTime) {
-      await sleep(minTypingTime - elapsed);
+    if (data.bot_message && data.bot_message.content) {
+      addMessage("bot", data.bot_message.content, true);
     }
-
-    hideTypingIndicator();
-
-    if (!res.ok) {
-      chatError.textContent = data.error || "Failed to send message";
-      await loadMessages();
-      return;
-    }
-
-    await loadMessages();
-  } catch (err) {
-    const elapsed = Date.now() - typingStartedAt;
-    const minTypingTime = 900;
-
-    if (elapsed < minTypingTime) {
-      await sleep(minTypingTime - elapsed);
-    }
-
-    hideTypingIndicator();
-    chatError.textContent = "Server error while sending message.";
-    await loadMessages();
+  } catch (error) {
+    removeTypingIndicator();
+    chatError.textContent = error.message || "Could not send message.";
+  } finally {
+    chatInput.disabled = false;
+    chatInput.focus();
   }
 });
 
@@ -209,8 +253,14 @@ logoutBtn.addEventListener("click", () => {
 });
 
 (async function init() {
+  setGreeting();
   conversationId = await getOrCreateConversation();
+
   if (conversationId) {
     await loadMessages();
+  }
+
+  if (chatInput) {
+    chatInput.focus();
   }
 })();

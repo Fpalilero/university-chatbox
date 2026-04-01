@@ -7,27 +7,31 @@
 </head>
 <body>
   <div class="page-container">
-    <header>
-      <h1 class="header">Welcome To Rowan University Chatbox</h1>
-    </header>
+    <div class="login-card">
+      <header>
+        <h1 class="header">Welcome To Rowan University Chatbox</h1>
+      </header>
 
-    <div id="Login" class="page">
-      <form id="loginForm">
-        <input type="text" id="email" placeholder="Enter Email" required>
-        <input type="password" id="password" placeholder="Enter Password" required>
+      <div id="Login" class="page">
+        <form id="loginForm">
+          <input type="text" id="email" placeholder="Enter Email" required>
+          <input type="password" id="password" placeholder="Enter Password" required>
 
-        <button type="submit" id="loginBtn">Login</button>
-        <button type="button" id="registerBtn">Register</button>
-      </form>
+          <div class="form-buttons">
+            <button type="submit" id="loginBtn">Login</button>
+            <button type="button" id="registerBtn">Register</button>
+          </div>
+        </form>
 
-      <p id="loginError" class="error"></p>
+        <p id="loginError" class="error"></p>
 
-      <div class="forgot-buttons">
-        <button type="button" id="forgotusernameBtn">Forgot Username?</button>
-        <button type="button" id="forgotPasswordBtn">Forgot Password?</button>
+        <div class="forgot-buttons">
+          <button type="button" id="forgotusernameBtn">Forgot Username?</button>
+          <button type="button" id="forgotPasswordBtn">Forgot Password?</button>
+        </div>
+
+        <p id="forgotMessage" class="error"></p>
       </div>
-
-      <p id="forgotMessage" class="error"></p>
     </div>
   </div>
 
@@ -70,14 +74,14 @@
 
         localStorage.setItem("access_token", data.access_token);
         localStorage.setItem("user_id", data.user_id);
-        localStorage.setItem("username", data.username);
+        localStorage.setItem("username", data.username || email.split("@")[0]);
 
         loginError.style.color = "green";
         loginError.textContent = "Login successful!";
 
         window.location.href = "/chat.html";
       } catch (err) {
-        loginError.textContent = "Server error. Is the backend running?";
+        loginError.textContent = "Server error. Is Flask running?";
       }
     });
 

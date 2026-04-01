@@ -5,23 +5,27 @@
   <title>University Chatbox</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <div class="page-container">
+<body class="chat-page">
+
+  <div class="chat-shell">
     <header class="chat-header">
-      <h1 class="header">University Chatbox</h1>
-      <button id="logoutBtn" type="button">Logout</button>
+      <div>
+        <h1 class="brand-title">University Chatbox</h1>
+        <p class="brand-subtitle" id="welcomeMessage">Welcome back</p>
+      </div>
+      <button id="logoutBtn" type="button" class="logout-btn">Logout</button>
     </header>
 
-    <div id="chatMessages" class="chat-messages"></div>
+    <main id="chatMessages" class="chat-messages"></main>
 
     <form id="chatForm" class="chat-input">
       <input
         id="chatInput"
         type="text"
-        placeholder="Type a message..."
+        placeholder="Type your message here..."
         autocomplete="off"
         required
-      />
+      >
       <button type="submit">Send</button>
     </form>
 
