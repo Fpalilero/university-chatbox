@@ -79,18 +79,24 @@ def create_app():
         )
 
     def get_or_create_rowan_bot():
-        bot = User.query.filter_by(email="rowanbot@rowan.edu").first()
-        if bot:
+        try:
+            bot = User.query.filter_by(email="rowanbot@rowan.edu").first()
+            if bot:
+                return bot
+
+            bot = User(
+                username="RowanBot",
+                email="rowanbot@rowan.edu",
+                password_hash=generate_password_hash("rowan-bot-internal")
+            )
+            db.session.add(bot)
+            db.session.commit()
             return bot
 
-        bot = User(
-            username="RowanBot",
-            email="rowanbot@rowan.edu",
-            password_hash=generate_password_hash("rowan-bot-internal")
-        )
-        db.session.add(bot)
-        db.session.commit()
-        return bot
+        except Exception as e:
+            db.session.rollback()
+            print("BOT CREATION RACE CONDITION:", str(e))
+            return User.query.filter_by(email="rowanbot@rowan.edu").first()
 
     def get_conversation_history(conversation_id: int, bot_user_id: int, limit: int = 12):
         messages = (
@@ -118,6 +124,9 @@ def create_app():
             return "Groq is not connected yet. Please add your GROQ_API_KEY in Render environment variables."
 
         bot_user = get_or_create_rowan_bot()
+        if not bot_user:
+            return "Sorry, I had trouble loading the Rowan assistant."
+
         history = get_conversation_history(conversation_id, bot_user.id, limit=10)
 
         system_prompt = (
@@ -329,7 +338,6 @@ def create_app():
             if not is_member(user_id, conversation_id):
                 return jsonify({"error": "not a member of this conversation"}), 403
 
-            # Save user message
             user_msg = Message(
                 conversation_id=conversation_id,
                 sender_user_id=user_id,
@@ -338,13 +346,15 @@ def create_app():
             db.session.add(user_msg)
             db.session.commit()
 
-            # Make sure bot exists
             bot_user = get_or_create_rowan_bot()
+            if not bot_user:
+                return jsonify({
+                    "error": "send_message_failed",
+                    "details": "Could not create or load RowanBot user."
+                }), 500
 
-            # Generate AI reply
             ai_reply = generate_rowan_reply(content, conversation_id)
 
-            # Save bot message
             bot_msg = Message(
                 conversation_id=conversation_id,
                 sender_user_id=bot_user.id,
