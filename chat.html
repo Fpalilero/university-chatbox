@@ -13,8 +13,23 @@
         <h1 class="brand-title">University Chatbox</h1>
         <p class="brand-subtitle" id="welcomeMessage">Welcome back</p>
       </div>
-      <button id="logoutBtn" type="button" class="logout-btn">Logout</button>
+      <div class="header-actions">
+        <button id="toggleChangePasswordBtn" type="button" class="secondary-btn">Change Password</button>
+        <button id="logoutBtn" type="button" class="logout-btn">Logout</button>
+      </div>
     </header>
+
+    <div id="changePasswordPanel" class="change-password-panel hidden">
+      <input id="currentPasswordInput" type="password" placeholder="Current password">
+      <input id="newPasswordInput" type="password" placeholder="New password">
+      <p id="changePasswordRequirements" class="password-help hidden">
+        Password must be at least 8 characters and include 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character.
+      </p>
+      <div class="change-password-actions">
+        <button id="submitChangePasswordBtn" type="button">Save New Password</button>
+      </div>
+      <p id="changePasswordMessage" class="error"></p>
+    </div>
 
     <main id="chatMessages" class="chat-messages"></main>
 

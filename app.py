@@ -1,4 +1,6 @@
 import os
+import re
+import secrets
 from datetime import datetime, timedelta, timezone
 
 from flask import Flask, request, jsonify, send_from_directory
@@ -50,6 +52,10 @@ def create_app():
     def serve_chat():
         return send_from_directory(os.getcwd(), "chat.html")
 
+    @app.get("/reset_password.html")
+    def serve_reset_password():
+        return send_from_directory(os.getcwd(), "reset_password.html")
+
     @app.get("/style.css")
     def serve_css():
         return send_from_directory(os.getcwd(), "style.css")
@@ -68,6 +74,13 @@ def create_app():
     def utcnow():
         return datetime.now(timezone.utc)
 
+    def normalize_dt(dt):
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt
+
     def is_member(user_id: int, conversation_id: int) -> bool:
         return (
             db.session.query(ConversationMember)
@@ -76,12 +89,27 @@ def create_app():
             is not None
         )
 
+    def is_strong_password(password: str) -> bool:
+        if len(password) < 8:
+            return False
+        if not re.search(r"[A-Z]", password):
+            return False
+        if not re.search(r"[a-z]", password):
+            return False
+        if not re.search(r"[0-9]", password):
+            return False
+        if not re.search(r"[^A-Za-z0-9]", password):
+            return False
+        return True
+
+    def generate_reset_token() -> str:
+        return secrets.token_urlsafe(32)
+
     def get_or_create_rowan_bot():
         bot_username = "RowanBot"
         bot_email = "rowanbot@rowan.edu"
 
         try:
-            # First try exact email or username match
             existing_bot = User.query.filter(
                 or_(User.email == bot_email, User.username == bot_username)
             ).first()
@@ -94,7 +122,6 @@ def create_app():
                     changed = True
 
                 if existing_bot.email != bot_email:
-                    # only set the email if no one else is already using it
                     email_owner = User.query.filter(
                         User.email == bot_email,
                         User.id != existing_bot.id
@@ -108,7 +135,6 @@ def create_app():
 
                 return existing_bot
 
-            # Otherwise create it
             bot = User(
                 username=bot_username,
                 email=bot_email,
@@ -122,7 +148,6 @@ def create_app():
             db.session.rollback()
             print("GET OR CREATE ROWAN BOT ERROR:", str(e))
 
-            # Try one more time after rollback
             fallback_bot = User.query.filter(
                 or_(User.email == bot_email, User.username == bot_username)
             ).first()
@@ -195,15 +220,24 @@ def create_app():
     def register():
         try:
             data = request.get_json(silent=True) or {}
-            username = (data.get("username") or "").strip()
             email = (data.get("email") or "").strip().lower()
             password = data.get("password") or ""
 
-            if not username or not email or not password:
-                return jsonify({"error": "username, email, and password are required"}), 400
+            if not email or not password:
+                return jsonify({"error": "email and password are required"}), 400
 
             if not email.endswith("@rowan.edu"):
                 return jsonify({"error": "registration requires a @rowan.edu email"}), 400
+
+            if not is_strong_password(password):
+                return jsonify({
+                    "error": "password must be at least 8 characters and include uppercase, lowercase, number, and special character"
+                }), 400
+
+            username = email.split("@")[0].strip()
+
+            if not username:
+                return jsonify({"error": "could not create username from email"}), 400
 
             existing = User.query.filter(
                 (User.username == username) | (User.email == email)
@@ -220,7 +254,12 @@ def create_app():
             db.session.add(user)
             db.session.commit()
 
-            return jsonify({"message": "registered", "user_id": user.id}), 201
+            return jsonify({
+                "message": "registered",
+                "user_id": user.id,
+                "username": user.username,
+                "email": user.email
+            }), 201
 
         except Exception as e:
             db.session.rollback()
@@ -248,6 +287,122 @@ def create_app():
         except Exception as e:
             print("LOGIN ERROR:", str(e))
             return jsonify({"error": "login_failed", "details": str(e)}), 500
+
+    @app.post("/api/forgot-password")
+    def forgot_password():
+        try:
+            data = request.get_json(silent=True) or {}
+            email = (data.get("email") or "").strip().lower()
+
+            if not email:
+                return jsonify({"error": "email is required"}), 400
+
+            if not email.endswith("@rowan.edu"):
+                return jsonify({"error": "please use your @rowan.edu email"}), 400
+
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                return jsonify({"error": "no account found for that email"}), 404
+
+            reset_token = generate_reset_token()
+            expires_at = datetime.utcnow() + timedelta(minutes=15)
+
+            user.reset_token = reset_token
+            user.reset_token_expires_at = expires_at
+            db.session.commit()
+
+            return jsonify({
+                "message": "Password reset token generated.",
+                "reset_token": reset_token,
+                "expires_at": expires_at.isoformat() + "Z"
+            }), 200
+
+        except Exception as e:
+            db.session.rollback()
+            print("FORGOT PASSWORD ERROR:", str(e))
+            return jsonify({"error": "forgot_password_failed", "details": str(e)}), 500
+
+    @app.post("/api/reset-password")
+    def reset_password():
+        try:
+            data = request.get_json(silent=True) or {}
+            email = (data.get("email") or "").strip().lower()
+            reset_token = (data.get("reset_token") or "").strip()
+            new_password = data.get("new_password") or ""
+
+            if not email or not reset_token or not new_password:
+                return jsonify({"error": "email, reset_token, and new_password are required"}), 400
+
+            if not email.endswith("@rowan.edu"):
+                return jsonify({"error": "please use your @rowan.edu email"}), 400
+
+            if not is_strong_password(new_password):
+                return jsonify({
+                    "error": "new password must be at least 8 characters and include uppercase, lowercase, number, and special character"
+                }), 400
+
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                return jsonify({"error": "invalid email or token"}), 400
+
+            if user.reset_token != reset_token:
+                return jsonify({"error": "invalid email or token"}), 400
+
+            expires_at = normalize_dt(user.reset_token_expires_at)
+            if not expires_at or utcnow() > expires_at:
+                return jsonify({"error": "reset token expired"}), 400
+
+            user.password_hash = generate_password_hash(new_password)
+            user.reset_token = None
+            user.reset_token_expires_at = None
+            db.session.commit()
+
+            return jsonify({"message": "Password reset successful. You can now log in."}), 200
+
+        except Exception as e:
+            db.session.rollback()
+            print("RESET PASSWORD ERROR:", str(e))
+            return jsonify({"error": "reset_password_failed", "details": str(e)}), 500
+
+    @app.post("/api/change-password")
+    @jwt_required()
+    def change_password():
+        try:
+            user_id = int(get_jwt_identity())
+            data = request.get_json(silent=True) or {}
+
+            current_password = data.get("current_password") or ""
+            new_password = data.get("new_password") or ""
+
+            if not current_password or not new_password:
+                return jsonify({"error": "current_password and new_password are required"}), 400
+
+            if not is_strong_password(new_password):
+                return jsonify({
+                    "error": "new password must be at least 8 characters and include uppercase, lowercase, number, and special character"
+                }), 400
+
+            user = User.query.get(user_id)
+            if not user:
+                return jsonify({"error": "user not found"}), 404
+
+            if not check_password_hash(user.password_hash, current_password):
+                return jsonify({"error": "current password is incorrect"}), 401
+
+            if check_password_hash(user.password_hash, new_password):
+                return jsonify({"error": "new password must be different from current password"}), 400
+
+            user.password_hash = generate_password_hash(new_password)
+            user.reset_token = None
+            user.reset_token_expires_at = None
+            db.session.commit()
+
+            return jsonify({"message": "Password changed successfully."}), 200
+
+        except Exception as e:
+            db.session.rollback()
+            print("CHANGE PASSWORD ERROR:", str(e))
+            return jsonify({"error": "change_password_failed", "details": str(e)}), 500
 
     # -------------------------
     # Conversations

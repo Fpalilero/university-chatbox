@@ -61,7 +61,8 @@ input[type="password"] {
 
 input[type="text"]:focus,
 input[type="password"]:focus,
-.chat-input input:focus {
+.chat-input input:focus,
+.change-password-panel input:focus {
   border-color: #861f41;
   background: #ffffff;
   box-shadow: 0 0 0 3px rgba(134, 31, 65, 0.12);
@@ -118,6 +119,19 @@ button:hover {
   min-height: 18px;
 }
 
+.password-help {
+  color: #b45309;
+  font-size: 13px;
+  margin-top: -6px;
+  margin-bottom: 4px;
+  text-align: left;
+  line-height: 1.4;
+}
+
+.hidden {
+  display: none;
+}
+
 /* chat page center */
 .chat-page {
   min-height: 100vh;
@@ -161,8 +175,51 @@ button:hover {
   color: #6b7280;
 }
 
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.secondary-btn {
+  min-width: 140px;
+  background: #eef2f7;
+  color: #374151;
+}
+
+.secondary-btn:hover {
+  background: #dde6f0;
+}
+
 .logout-btn {
   min-width: 100px;
+}
+
+.change-password-panel {
+  padding: 16px 22px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fafafa;
+}
+
+.change-password-panel input {
+  width: 100%;
+  height: 48px;
+  padding: 10px 14px;
+  font-size: 15px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #f9fafb;
+  outline: none;
+  transition: 0.2s ease;
+  margin-bottom: 12px;
+}
+
+.change-password-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.change-password-actions button {
+  width: 100%;
 }
 
 .chat-messages {
@@ -311,11 +368,16 @@ button:hover {
 
   .chat-input,
   .forgot-buttons,
-  .form-buttons {
+  .form-buttons,
+  .header-actions,
+  .change-password-actions {
     flex-direction: column;
   }
 
-  .chat-input button {
+  .chat-input button,
+  .change-password-actions button,
+  .secondary-btn,
+  .logout-btn {
     width: 100%;
   }
 }

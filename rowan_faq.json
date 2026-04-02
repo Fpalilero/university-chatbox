@@ -8,7 +8,11 @@
       "classes",
       "class registration",
       "self-service banner",
-      "banner"
+      "banner",
+      "sign up for classes",
+      "how do i register",
+      "how do i sign up for classes",
+      "register for classes"
     ],
     "answer": "Rowan course registration is completed online through Self-Service Banner during the registration period. For Registration & Records help, contact the Registrar at registrar@rowan.edu or 856-256-4360."
   },
@@ -17,7 +21,11 @@
     "keywords": [
       "registrar hours",
       "office hours",
-      "when is registrar open"
+      "when is registrar open",
+      "registrar open",
+      "hours for registrar",
+      "what time does the registrar open",
+      "registrar office hours"
     ],
     "answer": "The Registrar's office is open for in-person needs Monday through Friday, 8:00 a.m. to 4:30 p.m."
   },
@@ -28,7 +36,11 @@
       "advising",
       "academic advising",
       "meet with advisor",
-      "appointment with advisor"
+      "appointment with advisor",
+      "how do i meet with an advisor",
+      "advising appointment",
+      "talk to my advisor",
+      "contact advisor"
     ],
     "answer": "For general advising questions, contact advise@rowan.edu. To set up an appointment with an advisor, call the ACE Center at 856-256-4459 or use Rowan Success Network."
   },
@@ -40,7 +52,11 @@
       "aid",
       "scholarship",
       "grant",
-      "loan"
+      "loan",
+      "money for school",
+      "help paying tuition",
+      "pay for school",
+      "student aid"
     ],
     "answer": "For Financial Aid help, contact financialaid@rowan.edu. Rowan also offers ASK SUSAN for many financial-aid questions."
   },
@@ -53,7 +69,11 @@
       "payment",
       "refund",
       "tuition balance",
-      "pay tuition"
+      "pay tuition",
+      "student bill",
+      "tuition payment",
+      "account balance",
+      "billing office"
     ],
     "answer": "For billing and account questions, contact the Bursar's Office at bursar@rowan.edu or 856-256-4150."
   },
@@ -63,8 +83,27 @@
       "transcript",
       "official transcript",
       "unofficial transcript",
-      "enrollment verification"
+      "enrollment verification",
+      "get transcript",
+      "request transcript",
+      "order transcript",
+      "need my transcript"
     ],
     "answer": "Official transcripts can be requested through Student Self-Service Banner or through the National Student Clearinghouse. For transcript or records help, contact registrar@rowan.edu."
+  },
+  {
+    "intent": "login_help",
+    "keywords": [
+      "login issue",
+      "cannot log in",
+      "can't log in",
+      "can’t log in",
+      "login help",
+      "password issue",
+      "forgot password",
+      "forgot username",
+      "sign in problem"
+    ],
+    "answer": "If you are having login trouble, first double-check that you are using your @rowan.edu email and the correct password. If the issue continues, contact the appropriate Rowan support office or your system administrator."
   }
 ]

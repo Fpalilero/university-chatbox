@@ -14,8 +14,12 @@
 
       <div id="Login" class="page">
         <form id="loginForm">
-          <input type="text" id="email" placeholder="Enter Email" required>
+          <input type="text" id="email" placeholder="Enter Rowan Email" required>
           <input type="password" id="password" placeholder="Enter Password" required>
+
+          <p id="passwordRequirements" class="password-help hidden">
+            Password must be at least 8 characters and include 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character.
+          </p>
 
           <div class="form-buttons">
             <button type="submit" id="loginBtn">Login</button>
@@ -26,7 +30,6 @@
         <p id="loginError" class="error"></p>
 
         <div class="forgot-buttons">
-          <button type="button" id="forgotusernameBtn">Forgot Username?</button>
           <button type="button" id="forgotPasswordBtn">Forgot Password?</button>
         </div>
 
@@ -39,19 +42,48 @@
     const form = document.getElementById("loginForm");
     const loginError = document.getElementById("loginError");
     const registerBtn = document.getElementById("registerBtn");
+    const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
+    const forgotMessage = document.getElementById("forgotMessage");
+
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const passwordRequirements = document.getElementById("passwordRequirements");
 
     function requireRowanEmail(email) {
       return email.toLowerCase().endsWith("@rowan.edu");
     }
 
+    function validatePassword(password) {
+      const minLength = password.length >= 8;
+      const hasUpper = /[A-Z]/.test(password);
+      const hasLower = /[a-z]/.test(password);
+      const hasNumber = /[0-9]/.test(password);
+      const hasSpecial = /[^A-Za-z0-9]/.test(password);
+      return minLength && hasUpper && hasLower && hasNumber && hasSpecial;
+    }
+
+    function updatePasswordHint() {
+      const password = passwordInput.value;
+
+      if (!password) {
+        passwordRequirements.classList.add("hidden");
+        return;
+      }
+
+      passwordRequirements.classList.toggle("hidden", validatePassword(password));
+    }
+
+    passwordInput.addEventListener("input", updatePasswordHint);
+
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
+      const email = emailInput.value.trim().toLowerCase();
+      const password = passwordInput.value;
 
       loginError.style.color = "red";
       loginError.textContent = "";
+      forgotMessage.textContent = "";
 
       if (!requireRowanEmail(email)) {
         loginError.textContent = "Please use your @rowan.edu email.";
@@ -86,11 +118,12 @@
     });
 
     registerBtn.addEventListener("click", async () => {
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
+      const email = emailInput.value.trim().toLowerCase();
+      const password = passwordInput.value;
 
       loginError.style.color = "red";
       loginError.textContent = "";
+      forgotMessage.textContent = "";
 
       if (!email || !password) {
         loginError.textContent = "Enter email and password first.";
@@ -102,13 +135,17 @@
         return;
       }
 
-      const username = email.split("@")[0];
+      if (!validatePassword(password)) {
+        passwordRequirements.classList.remove("hidden");
+        loginError.textContent = "Password does not meet the requirements.";
+        return;
+      }
 
       try {
         const res = await fetch("/api/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, email, password })
+          body: JSON.stringify({ email, password })
         });
 
         const data = await res.json();
@@ -119,9 +156,48 @@
         }
 
         loginError.style.color = "green";
-        loginError.textContent = "Registration successful! Now click Login.";
+        loginError.textContent = `Registration successful! Your account was created for ${data.email}. Now click Login.`;
+        passwordRequirements.classList.add("hidden");
       } catch (err) {
         loginError.textContent = "Server error during registration.";
+      }
+    });
+
+    forgotPasswordBtn.addEventListener("click", async () => {
+      const email = emailInput.value.trim().toLowerCase();
+
+      loginError.textContent = "";
+      forgotMessage.style.color = "#c62828";
+      forgotMessage.textContent = "";
+
+      if (!email) {
+        forgotMessage.textContent = "Enter your Rowan email first.";
+        return;
+      }
+
+      if (!requireRowanEmail(email)) {
+        forgotMessage.textContent = "Please use your @rowan.edu email.";
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/forgot-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          forgotMessage.textContent = data.error || "Could not generate reset token.";
+          return;
+        }
+
+        window.location.href =
+          `/reset_password.html?email=${encodeURIComponent(email)}&token=${encodeURIComponent(data.reset_token)}`;
+      } catch (err) {
+        forgotMessage.textContent = "Server error while generating reset token.";
       }
     });
   </script>

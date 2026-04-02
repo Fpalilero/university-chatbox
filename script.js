@@ -7,6 +7,14 @@ const chatError = document.getElementById("chatError");
 const logoutBtn = document.getElementById("logoutBtn");
 const welcomeMessage = document.getElementById("welcomeMessage");
 
+const toggleChangePasswordBtn = document.getElementById("toggleChangePasswordBtn");
+const changePasswordPanel = document.getElementById("changePasswordPanel");
+const currentPasswordInput = document.getElementById("currentPasswordInput");
+const newPasswordInput = document.getElementById("newPasswordInput");
+const submitChangePasswordBtn = document.getElementById("submitChangePasswordBtn");
+const changePasswordMessage = document.getElementById("changePasswordMessage");
+const changePasswordRequirements = document.getElementById("changePasswordRequirements");
+
 const token = localStorage.getItem("access_token");
 const userId = localStorage.getItem("user_id");
 
@@ -39,6 +47,29 @@ function authHeaders() {
     "Content-Type": "application/json",
     "Authorization": `Bearer ${token}`
   };
+}
+
+function validatePassword(password) {
+  const minLength = password.length >= 8;
+  const hasUpper = /[A-Z]/.test(password);
+  const hasLower = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[^A-Za-z0-9]/.test(password);
+
+  return minLength && hasUpper && hasLower && hasNumber && hasSpecial;
+}
+
+function updateChangePasswordHint() {
+  if (!newPasswordInput || !changePasswordRequirements) return;
+
+  const password = newPasswordInput.value;
+
+  if (!password) {
+    changePasswordRequirements.classList.add("hidden");
+    return;
+  }
+
+  changePasswordRequirements.classList.toggle("hidden", validatePassword(password));
 }
 
 function setGreeting() {
@@ -241,6 +272,32 @@ async function sendMessage(messageText) {
   return data;
 }
 
+async function changePassword(currentPassword, newPassword) {
+  const res = await fetch(`${API_BASE}/api/change-password`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword
+    })
+  });
+
+  const contentType = res.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    const text = await res.text();
+    console.error("Change password non-JSON response:", text);
+    throw new Error("Server returned HTML instead of JSON while changing password.");
+  }
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.details || data.error || "Failed to change password");
+  }
+
+  return data;
+}
+
 chatForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   chatError.textContent = "";
@@ -276,6 +333,49 @@ chatForm.addEventListener("submit", async (e) => {
     chatInput.focus();
   }
 });
+
+if (toggleChangePasswordBtn) {
+  toggleChangePasswordBtn.addEventListener("click", () => {
+    changePasswordPanel.classList.toggle("hidden");
+    changePasswordMessage.textContent = "";
+  });
+}
+
+if (newPasswordInput) {
+  newPasswordInput.addEventListener("input", updateChangePasswordHint);
+}
+
+if (submitChangePasswordBtn) {
+  submitChangePasswordBtn.addEventListener("click", async () => {
+    const currentPassword = currentPasswordInput.value;
+    const newPassword = newPasswordInput.value;
+
+    changePasswordMessage.style.color = "#c62828";
+    changePasswordMessage.textContent = "";
+
+    if (!currentPassword || !newPassword) {
+      changePasswordMessage.textContent = "Enter your current password and new password.";
+      return;
+    }
+
+    if (!validatePassword(newPassword)) {
+      changePasswordRequirements.classList.remove("hidden");
+      changePasswordMessage.textContent = "New password does not meet the requirements.";
+      return;
+    }
+
+    try {
+      const data = await changePassword(currentPassword, newPassword);
+      changePasswordMessage.style.color = "green";
+      changePasswordMessage.textContent = data.message || "Password changed successfully.";
+      currentPasswordInput.value = "";
+      newPasswordInput.value = "";
+      changePasswordRequirements.classList.add("hidden");
+    } catch (error) {
+      changePasswordMessage.textContent = error.message || "Could not change password.";
+    }
+  });
+}
 
 logoutBtn.addEventListener("click", () => {
   localStorage.clear();
