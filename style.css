@@ -328,4 +328,11 @@ button:hover {
   .chat-input button {
     width: 100%;
   }
+
+  .password-hint {
+  display: none;
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 6px;
+}
 }
