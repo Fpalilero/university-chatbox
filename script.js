@@ -10,28 +10,17 @@ const welcomeMessage = document.getElementById("welcomeMessage");
 const token = localStorage.getItem("access_token");
 const userId = localStorage.getItem("user_id");
 
-function getSavedUsername() {
-  const raw = localStorage.getItem("username");
-
-  if (!raw) return "Student";
-
-  const cleaned = raw.trim();
-  if (
-    cleaned === "" ||
-    cleaned.toLowerCase() === "undefined" ||
-    cleaned.toLowerCase() === "null"
-  ) {
-    return "Student";
-  }
-
-  return cleaned;
-}
-
-const username = getSavedUsername();
 let conversationId = null;
 
 if (!token) {
   window.location.href = "/";
+}
+
+if (typeof marked !== "undefined") {
+  marked.setOptions({
+    breaks: true,
+    gfm: true
+  });
 }
 
 function authHeaders() {
@@ -62,22 +51,6 @@ function scrollToBottom(smooth = true) {
   });
 }
 
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-function formatBotMessage(text) {
-  let safe = escapeHtml(text);
-
-  safe = safe.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-  safe = safe.replace(/\n/g, "<br>");
-
-  return safe;
-}
-
 function addMessage(role, text, animated = true) {
   const bubble = document.createElement("div");
   bubble.className = role === "user" ? "msg msg-user" : "msg msg-bot";
@@ -86,10 +59,14 @@ function addMessage(role, text, animated = true) {
     bubble.classList.add("msg-enter");
   }
 
-  if (role === "bot") {
-    bubble.innerHTML = formatBotMessage(text);
+  if (role === "bot" && typeof marked !== "undefined") {
+    bubble.innerHTML = marked.parse(text || "");
+    bubble.querySelectorAll("a").forEach(link => {
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+    });
   } else {
-    bubble.textContent = text;
+    bubble.textContent = text || "";
   }
 
   chatMessages.appendChild(bubble);
