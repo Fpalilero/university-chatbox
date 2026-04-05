@@ -5,8 +5,8 @@
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: linear-gradient(135deg, #f4f7fb, #e9f1ff);
-  color: #1f2937;
+  background: linear-gradient(135deg, #121212, #1e1e1e);
+  color: #e0e0e0;
 }
 
 /* login page center */
@@ -26,7 +26,8 @@ body {
 .login-card {
   width: 100%;
   max-width: 520px;
-  background: #ffffff;
+  background: #2a2a2a;
+  border: 1px solid #444;
   border-radius: 22px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
   padding: 32px;
@@ -37,7 +38,7 @@ body {
   margin: 0 0 24px;
   text-align: center;
   font-size: 28px;
-  color: #861f41;
+  color: #3b82f6;
 }
 
 #loginForm {
@@ -54,7 +55,8 @@ input[type="password"] {
   font-size: 15px;
   border: 1px solid #d1d5db;
   border-radius: 10px;
-  background: #f9fafb;
+  background: #1e1e1e;
+  color: #ffffff;
   outline: none;
   transition: 0.2s ease;
 }
@@ -62,9 +64,9 @@ input[type="password"] {
 input[type="text"]:focus,
 input[type="password"]:focus,
 .chat-input input:focus {
-  border-color: #861f41;
-  background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(134, 31, 65, 0.12);
+  border-color: #3b82f6;
+  background: #1e1e1e;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
 }
 
 .form-buttons {
@@ -81,7 +83,7 @@ button {
   padding: 0 18px;
   font-size: 14px;
   font-weight: 600;
-  background: #861f41;
+  background: #3b82f6;
   color: white;
   border: none;
   border-radius: 10px;
@@ -90,7 +92,7 @@ button {
 }
 
 button:hover {
-  background: #6f1935;
+  background: #2563eb;
   transform: translateY(-1px);
 }
 
@@ -215,11 +217,17 @@ button:hover {
   height: 48px;
   padding: 10px 14px;
   font-size: 16px;
-  border: 1px solid #d1d5db;
+  border: 1px solid #3b82f6;
   border-radius: 10px;
-  background: #f9fafb;
+  background: #2a2a2a; /* a slightly lighter background for input */
+  color: #ffffff; /* typing is visible */
   outline: none;
   transition: 0.2s ease;
+}
+
+/* placeholder color */
+.chat-input input::placeholder {
+  color: #9ca3af;
 }
 
 .chat-input button {
@@ -353,4 +361,10 @@ button:hover {
   .chat-input button {
     width: 100%;
   }
+}
+
+/* logo */
+.logo {
+  display: block;
+  margin: 0 auto;
 }
