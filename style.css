@@ -9,6 +9,7 @@ body {
   color: #1f2937;
 }
 
+/* login page center */
 .page-container {
   min-height: 100vh;
   width: 100%;
@@ -39,8 +40,7 @@ body {
   color: #861f41;
 }
 
-#loginForm,
-#resetPasswordForm {
+#loginForm {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -67,11 +67,6 @@ input[type="password"]:focus,
   box-shadow: 0 0 0 3px rgba(134, 31, 65, 0.12);
 }
 
-input[readonly] {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-
 .form-buttons {
   display: flex;
   gap: 12px;
@@ -82,7 +77,7 @@ input[readonly] {
 }
 
 button {
-  min-height: 46px;
+  height: 44px;
   padding: 0 18px;
   font-size: 14px;
   font-weight: 600;
@@ -123,17 +118,7 @@ button:hover {
   min-height: 18px;
 }
 
-.password-help {
-  font-size: 13px;
-  color: #6b7280;
-  margin: 0;
-  line-height: 1.4;
-}
-
-.hidden {
-  display: none;
-}
-
+/* chat page center */
 .chat-page {
   min-height: 100vh;
   display: flex;
@@ -195,8 +180,9 @@ button:hover {
   max-width: 72%;
   padding: 12px 14px;
   border-radius: 16px;
-  line-height: 1.5;
+  line-height: 1.4;
   word-wrap: break-word;
+  overflow-wrap: break-word;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
 }
 
@@ -213,56 +199,7 @@ button:hover {
   color: #1f2937;
   border: 1px solid #e5e7eb;
   border-bottom-left-radius: 6px;
-}
-
-.msg-bot p {
-  margin: 0 0 8px;
-}
-
-.msg-bot p:last-child {
-  margin-bottom: 0;
-}
-
-.msg-bot strong {
-  font-weight: 700;
-}
-
-.msg-bot ul,
-.msg-bot ol {
-  margin: 8px 0;
-  padding-left: 22px;
-}
-
-.msg-bot li {
-  margin-bottom: 4px;
-}
-
-.msg-bot code {
-  background: #f3f4f6;
-  padding: 2px 6px;
-  border-radius: 6px;
-  font-family: Consolas, Monaco, monospace;
-  font-size: 13px;
-}
-
-.msg-bot pre {
-  background: #111827;
-  color: #f9fafb;
-  padding: 12px;
-  border-radius: 10px;
-  overflow-x: auto;
-  margin: 10px 0;
-}
-
-.msg-bot pre code {
-  background: transparent;
-  padding: 0;
-  color: inherit;
-}
-
-.msg-bot a {
-  color: #0f62fe;
-  text-decoration: underline;
+  white-space: normal;
 }
 
 .chat-input {
@@ -277,7 +214,7 @@ button:hover {
   flex: 1;
   height: 48px;
   padding: 10px 14px;
-  font-size: 15px;
+  font-size: 16px;
   border: 1px solid #d1d5db;
   border-radius: 10px;
   background: #f9fafb;
@@ -344,6 +281,31 @@ button:hover {
   transform: translateY(0);
 }
 
+/* bot message formatting */
+.msg-bot p {
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+
+.msg-bot p:last-child {
+  margin-bottom: 0;
+}
+
+.msg-bot ul {
+  margin: 10px 0 0 20px;
+  padding-left: 10px;
+}
+
+.msg-bot li {
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.msg-bot strong {
+  font-weight: 700;
+}
+
+/* mobile */
 @media (max-width: 768px) {
   .page-container,
   .chat-page {
@@ -372,6 +334,14 @@ button:hover {
 
   .msg {
     max-width: 85%;
+  }
+
+  .msg-bot {
+    font-size: 15px;
+  }
+
+  .msg-bot ul {
+    margin-left: 16px;
   }
 
   .chat-input,

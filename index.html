@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+
+  <!-- ✅ THIS FIXES MOBILE -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>University Chatbox</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -26,6 +30,7 @@
         <p id="loginError" class="error"></p>
 
         <div class="forgot-buttons">
+          <button type="button" id="forgotusernameBtn">Forgot Username?</button>
           <button type="button" id="forgotPasswordBtn">Forgot Password?</button>
         </div>
 
@@ -38,8 +43,6 @@
     const form = document.getElementById("loginForm");
     const loginError = document.getElementById("loginError");
     const registerBtn = document.getElementById("registerBtn");
-    const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
-    const forgotMessage = document.getElementById("forgotMessage");
 
     function requireRowanEmail(email) {
       return email.toLowerCase().endsWith("@rowan.edu");
@@ -51,9 +54,7 @@
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value;
 
-      loginError.style.color = "red";
       loginError.textContent = "";
-      forgotMessage.textContent = "";
 
       if (!requireRowanEmail(email)) {
         loginError.textContent = "Please use your @rowan.edu email.";
@@ -76,13 +77,11 @@
 
         localStorage.setItem("access_token", data.access_token);
         localStorage.setItem("user_id", data.user_id);
-
-        loginError.style.color = "green";
-        loginError.textContent = "Login successful!";
+        localStorage.setItem("username", data.username || email.split("@")[0]);
 
         window.location.href = "/chat.html";
-      } catch (err) {
-        loginError.textContent = "Server error. Is Flask running?";
+      } catch {
+        loginError.textContent = "Server error.";
       }
     });
 
@@ -90,9 +89,7 @@
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value;
 
-      loginError.style.color = "red";
       loginError.textContent = "";
-      forgotMessage.textContent = "";
 
       if (!email || !password) {
         loginError.textContent = "Enter email and password first.";
@@ -120,47 +117,9 @@
           return;
         }
 
-        loginError.style.color = "green";
-        loginError.textContent = "Registration successful! Now click Login.";
-      } catch (err) {
-        loginError.textContent = "Server error during registration.";
-      }
-    });
-
-    forgotPasswordBtn.addEventListener("click", async () => {
-      const email = document.getElementById("email").value.trim();
-
-      forgotMessage.style.color = "#c62828";
-      forgotMessage.textContent = "";
-      loginError.textContent = "";
-
-      if (!email) {
-        forgotMessage.textContent = "Enter your email first.";
-        return;
-      }
-
-      if (!requireRowanEmail(email)) {
-        forgotMessage.textContent = "Please use your @rowan.edu email.";
-        return;
-      }
-
-      try {
-        const res = await fetch("/api/forgot-password", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          forgotMessage.textContent = data.error || "Could not start password reset.";
-          return;
-        }
-
-        window.location.href = `/reset_password.html?email=${encodeURIComponent(email)}&token=${encodeURIComponent(data.reset_token)}`;
-      } catch (err) {
-        forgotMessage.textContent = "Server error.";
+        loginError.textContent = "Registered! Now login.";
+      } catch {
+        loginError.textContent = "Server error.";
       }
     });
   </script>

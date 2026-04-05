@@ -1,6 +1,4 @@
 import os
-import random
-import string
 from datetime import datetime, timedelta, timezone
 
 from flask import Flask, request, jsonify, send_from_directory
@@ -17,13 +15,6 @@ from sqlalchemy import or_
 from models import db, User, Conversation, ConversationMember, Message
 
 load_dotenv()
-
-# temporary in-memory reset token storage
-reset_tokens = {}
-
-
-def generate_token(length=6):
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
 
 def create_app():
@@ -58,10 +49,6 @@ def create_app():
     @app.get("/chat.html")
     def serve_chat():
         return send_from_directory(os.getcwd(), "chat.html")
-
-    @app.get("/reset_password.html")
-    def serve_reset_password():
-        return send_from_directory(os.getcwd(), "reset_password.html")
 
     @app.get("/style.css")
     def serve_css():
@@ -162,9 +149,46 @@ def create_app():
 
         return history
 
+    def asks_about_other_university(user_message: str) -> bool:
+        lowered = user_message.lower()
+
+        other_school_keywords = [
+            "rutgers",
+            "temple",
+            "penn state",
+            "drexel",
+            "njit",
+            "stockton",
+            "tcnj",
+            "princeton",
+            "monmouth",
+            "seton hall",
+            "kean",
+            "rowan college at burlington county",
+            "rcbc",
+            "camden county college",
+            "ccc",
+            "harvard",
+            "yale",
+            "stanford",
+            "mit",
+            "nyu"
+        ]
+
+        return any(keyword in lowered for keyword in other_school_keywords)
+
+    def redirect_to_rowan_response() -> str:
+        return (
+            "I’m here to help with Rowan University questions. "
+            "I can help with Rowan admissions, registration, advising, financial aid, billing, transcripts, and other Rowan student services."
+        )
+
     def generate_rowan_reply(user_message: str, conversation_id: int) -> str:
         if not groq_client:
             return "Groq is not connected yet. Please add your GROQ_API_KEY in Render environment variables."
+
+        if asks_about_other_university(user_message):
+            return redirect_to_rowan_response()
 
         bot_user = get_or_create_rowan_bot()
         if not bot_user:
@@ -173,11 +197,17 @@ def create_app():
         history = get_conversation_history(conversation_id, bot_user.id, limit=10)
 
         system_prompt = (
-            "You are Rowan, a helpful chatbot for Rowan University students. "
-            "Be friendly, clear, and concise. "
-            "You may use markdown like bullet points and bold when helpful. "
-            "If you are unsure about a Rowan-specific fact, say you are not sure instead of inventing details. "
-            "Keep answers practical and easy to understand."
+            "You are Rowan, the official chatbot for Rowan University students. "
+            "You must stay focused only on Rowan University. "
+            "If a user asks about another school such as Temple, Rutgers, Penn State, Drexel, NJIT, or any non-Rowan university, "
+            "do not provide information about that school. "
+            "Instead, politely redirect the conversation back to Rowan University. "
+            "Say that you are here to help with Rowan admissions, registration, advising, financial aid, billing, transcripts, and student services. "
+            "Do not pretend to be a general college chatbot. "
+            "Do not answer as if you represent other schools. "
+            "If the user compares Rowan to another school, keep the answer short and bring it back to Rowan. "
+            "Be friendly, clear, concise, and practical. "
+            "If you are unsure about a Rowan-specific fact, say you are not sure instead of making it up."
         )
 
         try:
@@ -188,12 +218,12 @@ def create_app():
                     *history,
                     {"role": "user", "content": user_message}
                 ],
-                temperature=0.7,
+                temperature=0.5,
                 max_completion_tokens=300
             )
 
             reply = completion.choices[0].message.content
-            return (reply or "").strip() or "I’m here to help."
+            return (reply or "").strip() or "I’m here to help with Rowan University."
         except Exception as e:
             print("GROQ ERROR:", str(e))
             return "Sorry, I had trouble generating a response right now."
@@ -251,71 +281,13 @@ def create_app():
             token = create_access_token(identity=str(user.id), expires_delta=timedelta(hours=8))
             return jsonify({
                 "access_token": token,
-                "user_id": user.id
+                "user_id": user.id,
+                "username": user.username
             })
 
         except Exception as e:
             print("LOGIN ERROR:", str(e))
             return jsonify({"error": "login_failed", "details": str(e)}), 500
-
-    @app.post("/api/forgot-password")
-    def forgot_password():
-        try:
-            data = request.get_json(silent=True) or {}
-            email = (data.get("email") or "").strip().lower()
-
-            if not email:
-                return jsonify({"error": "email is required"}), 400
-
-            user = User.query.filter_by(email=email).first()
-            if not user:
-                return jsonify({"error": "User not found"}), 404
-
-            token = generate_token()
-            reset_tokens[email] = token
-
-            return jsonify({
-                "message": "Reset token generated",
-                "reset_token": token
-            })
-
-        except Exception as e:
-            print("FORGOT PASSWORD ERROR:", str(e))
-            return jsonify({"error": "forgot_password_failed", "details": str(e)}), 500
-
-    @app.post("/api/reset-password")
-    def reset_password():
-        try:
-            data = request.get_json(silent=True) or {}
-
-            email = (data.get("email") or "").strip().lower()
-            token = (data.get("reset_token") or "").strip()
-            new_password = data.get("new_password") or ""
-
-            if not email or not token or not new_password:
-                return jsonify({"error": "email, reset_token, and new_password are required"}), 400
-
-            if email not in reset_tokens:
-                return jsonify({"error": "No reset request found"}), 400
-
-            if reset_tokens[email] != token:
-                return jsonify({"error": "Invalid token"}), 400
-
-            user = User.query.filter_by(email=email).first()
-            if not user:
-                return jsonify({"error": "User not found"}), 404
-
-            user.password_hash = generate_password_hash(new_password)
-            db.session.commit()
-
-            del reset_tokens[email]
-
-            return jsonify({"message": "Password reset successful"})
-
-        except Exception as e:
-            db.session.rollback()
-            print("RESET PASSWORD ERROR:", str(e))
-            return jsonify({"error": "reset_password_failed", "details": str(e)}), 500
 
     # -------------------------
     # Conversations

@@ -10,17 +10,28 @@ const welcomeMessage = document.getElementById("welcomeMessage");
 const token = localStorage.getItem("access_token");
 const userId = localStorage.getItem("user_id");
 
+function getSavedUsername() {
+  const raw = localStorage.getItem("username");
+
+  if (!raw) return "Student";
+
+  const cleaned = raw.trim();
+  if (
+    cleaned === "" ||
+    cleaned.toLowerCase() === "undefined" ||
+    cleaned.toLowerCase() === "null"
+  ) {
+    return "Student";
+  }
+
+  return cleaned;
+}
+
+const username = getSavedUsername();
 let conversationId = null;
 
 if (!token) {
   window.location.href = "/";
-}
-
-if (typeof marked !== "undefined") {
-  marked.setOptions({
-    breaks: true,
-    gfm: true
-  });
 }
 
 function authHeaders() {
@@ -51,6 +62,70 @@ function scrollToBottom(smooth = true) {
   });
 }
 
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function formatMessage(text) {
+  if (!text) return "";
+
+  let safe = escapeHtml(text);
+
+  // Bold support: **text**
+  safe = safe.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
+  // Split into lines
+  const lines = safe.split("\n").map(line => line.trim()).filter(line => line !== "");
+
+  if (lines.length === 0) {
+    return safe;
+  }
+
+  let html = "";
+  let inList = false;
+
+  for (const line of lines) {
+    const isBullet =
+      line.startsWith("- ") ||
+      line.startsWith("* ");
+
+    if (isBullet) {
+      if (!inList) {
+        html += "<ul>";
+        inList = true;
+      }
+      html += `<li>${line.substring(2).trim()}</li>`;
+    } else {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      html += `<p>${line}</p>`;
+    }
+  }
+
+  if (inList) {
+    html += "</ul>";
+  }
+
+  // Fallback: if AI sends * bullet * bullet in one long line
+  if (!html.includes("<ul>") && safe.includes(" * ")) {
+    const parts = safe.split(" * ").map(part => part.trim()).filter(Boolean);
+    if (parts.length > 1) {
+      let fallbackHtml = `<p>${parts[0]}</p><ul>`;
+      for (let i = 1; i < parts.length; i++) {
+        fallbackHtml += `<li>${parts[i]}</li>`;
+      }
+      fallbackHtml += "</ul>";
+      return fallbackHtml;
+    }
+  }
+
+  return html;
+}
+
 function addMessage(role, text, animated = true) {
   const bubble = document.createElement("div");
   bubble.className = role === "user" ? "msg msg-user" : "msg msg-bot";
@@ -59,14 +134,10 @@ function addMessage(role, text, animated = true) {
     bubble.classList.add("msg-enter");
   }
 
-  if (role === "bot" && typeof marked !== "undefined") {
-    bubble.innerHTML = marked.parse(text || "");
-    bubble.querySelectorAll("a").forEach(link => {
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-    });
+  if (role === "bot") {
+    bubble.innerHTML = formatMessage(text);
   } else {
-    bubble.textContent = text || "";
+    bubble.textContent = text;
   }
 
   chatMessages.appendChild(bubble);
