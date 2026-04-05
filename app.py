@@ -21,6 +21,15 @@ load_dotenv()
 def create_app():
     app = Flask(__name__)
     CORS(app)
+    
+    # Validate required environment variables
+    groq_api_key = os.getenv("GROQ_API_KEY")
+    if not groq_api_key:
+        print("="*70)
+        print("WARNING: GROQ_API_KEY environment variable is not set!")
+        print("The chatbot will not be able to generate AI responses.")
+        print("Please set GROQ_API_KEY in your .env file or environment.")
+        print("="*70)
 
     database_url = os.getenv("DATABASE_URL", "sqlite:///chatbox.db")
     if database_url.startswith("postgres://"):
@@ -541,7 +550,7 @@ def create_app():
                 return jsonify({"error": "edit window expired (5 minutes)"}), 403
 
             msg.content = new_content
-            msg.edited_at = datetime.utcnow()
+            msg.edited_at = utcnow()
             db.session.commit()
             return jsonify({"message": "edited"})
 
@@ -567,7 +576,7 @@ def create_app():
             if utcnow() > created + timedelta(minutes=5):
                 return jsonify({"error": "delete window expired (5 minutes)"}), 403
 
-            msg.deleted_at = datetime.utcnow()
+            msg.deleted_at = utcnow()
             db.session.commit()
             return jsonify({"message": "deleted"})
 
