@@ -1,7 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
+
+def utcnow():
+    return datetime.now(timezone.utc)
+
 
 class User(db.Model):
     __tablename__ = "users"
@@ -9,17 +13,16 @@ class User(db.Model):
     username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(255), unique=True, nullable=False)
     password_hash = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False)
 
-    reset_token = db.Column(db.String(128), unique=True, nullable=True)
-    reset_token_expires_at = db.Column(db.DateTime, nullable=True)
 
 class Conversation(db.Model):
     __tablename__ = "conversations"
     id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.String(10), nullable=False)
     name = db.Column(db.String(100))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False)
+
 
 class ConversationMember(db.Model):
     __tablename__ = "conversation_members"
@@ -34,7 +37,8 @@ class ConversationMember(db.Model):
         primary_key=True
     )
     role = db.Column(db.String(10), default="member", nullable=False)
-    joined_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    joined_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False)
+
 
 class Message(db.Model):
     __tablename__ = "messages"
@@ -50,6 +54,6 @@ class Message(db.Model):
         nullable=False
     )
     content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    edited_at = db.Column(db.DateTime)
-    deleted_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False)
+    edited_at = db.Column(db.DateTime(timezone=True))
+    deleted_at = db.Column(db.DateTime(timezone=True))
