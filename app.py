@@ -1,4 +1,5 @@
 import os
+import secrets
 from datetime import datetime, timedelta, timezone
 
 from flask import Flask, request, jsonify, send_from_directory
@@ -49,6 +50,10 @@ def create_app():
     @app.get("/chat.html")
     def serve_chat():
         return send_from_directory(os.getcwd(), "chat.html")
+
+    @app.get("/reset_password.html")
+    def serve_reset_password():
+        return send_from_directory(os.getcwd(), "reset_password.html")
 
     @app.get("/style.css")
     def serve_css():
@@ -288,6 +293,62 @@ def create_app():
         except Exception as e:
             print("LOGIN ERROR:", str(e))
             return jsonify({"error": "login_failed", "details": str(e)}), 500
+
+    @app.post("/api/forgot-password")
+    def forgot_password():
+        try:
+            data = request.get_json(silent=True) or {}
+            email = (data.get("email") or "").strip().lower()
+
+            if not email:
+                return jsonify({"error": "email is required"}), 400
+
+            if not email.endswith("@rowan.edu"):
+                return jsonify({"error": "please use your @rowan.edu email"}), 400
+
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                return jsonify({"error": "email not found"}), 404
+
+            reset_token = secrets.token_urlsafe(16)
+
+            return jsonify({
+                "message": "Reset started.",
+                "reset_token": reset_token
+            }), 200
+
+        except Exception as e:
+            print("FORGOT PASSWORD ERROR:", str(e))
+            return jsonify({"error": "forgot_password_failed", "details": str(e)}), 500
+
+    @app.post("/api/reset-password")
+    def reset_password():
+        try:
+            data = request.get_json(silent=True) or {}
+
+            email = (data.get("email") or "").strip().lower()
+            token = (data.get("reset_token") or "").strip()
+            new_password = data.get("new_password") or ""
+
+            if not email or not token or not new_password:
+                return jsonify({"error": "missing fields"}), 400
+
+            if not email.endswith("@rowan.edu"):
+                return jsonify({"error": "please use your @rowan.edu email"}), 400
+
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                return jsonify({"error": "user not found"}), 404
+
+            user.password_hash = generate_password_hash(new_password)
+            db.session.commit()
+
+            return jsonify({"message": "password reset successful"}), 200
+
+        except Exception as e:
+            db.session.rollback()
+            print("RESET PASSWORD ERROR:", str(e))
+            return jsonify({"error": "reset_failed", "details": str(e)}), 500
 
     # -------------------------
     # Conversations
