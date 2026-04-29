@@ -5,11 +5,11 @@
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: linear-gradient(135deg, #121212, #1e1e1e);
-  color: #e0e0e0;
+  background: linear-gradient(135deg, #f4f7fb, #e9f1ff);
+  color: #1f2937;
 }
 
-/* login page center */
+/* page center */
 .page-container {
   min-height: 100vh;
   width: 100%;
@@ -26,22 +26,78 @@ body {
 .login-card {
   width: 100%;
   max-width: 520px;
-  background: #2a2a2a;
-  border: 1px solid #444;
+  background: #ffffff;
   border-radius: 22px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
   padding: 32px;
   margin: 0 auto;
 }
 
+.login-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.login-header-row .header {
+  margin: 0;
+  flex: 1;
+}
+
 .header {
   margin: 0 0 24px;
   text-align: center;
   font-size: 28px;
-  color: #3b82f6;
+  color: #861f41;
 }
 
-#loginForm {
+/* =====================
+   LOGO (ADD THIS)
+===================== */
+.brand-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-logo {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+  cursor: pointer;
+  transition: transform 0.25s ease, filter 0.25s ease;
+  animation: logoFloat 3s ease-in-out infinite;
+
+}
+
+.brand-logo:hover {
+  animation: logoPulse 0.6s ease;
+  transform: scale(1.12) rotate(-2deg);
+  filter: drop-shadow(0 0 8px rgba(255, 200, 0, 0.7));
+}
+
+@keyframes logoPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+  100% { transform: scale(1.12); }
+}
+
+@keyframes logoFloat {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+#loginForm,
+#resetPasswordForm {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -55,8 +111,8 @@ input[type="password"] {
   font-size: 15px;
   border: 1px solid #d1d5db;
   border-radius: 10px;
-  background: #1e1e1e;
-  color: #ffffff;
+  background: #f9fafb;
+  color: #1f2937;
   outline: none;
   transition: 0.2s ease;
 }
@@ -64,9 +120,15 @@ input[type="password"] {
 input[type="text"]:focus,
 input[type="password"]:focus,
 .chat-input input:focus {
-  border-color: #3b82f6;
-  background: #1e1e1e;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+  border-color: #861f41;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(134, 31, 65, 0.12);
+}
+
+input[type="text"]::placeholder,
+input[type="password"]::placeholder,
+.chat-input input::placeholder {
+  color: #6b7280;
 }
 
 .form-buttons {
@@ -83,7 +145,7 @@ button {
   padding: 0 18px;
   font-size: 14px;
   font-weight: 600;
-  background: #3b82f6;
+  background: #861f41;
   color: white;
   border: none;
   border-radius: 10px;
@@ -92,8 +154,17 @@ button {
 }
 
 button:hover {
-  background: #2563eb;
+  background: #6f1935;
   transform: translateY(-1px);
+}
+
+.secondary-btn {
+  background: #eef2f7;
+  color: #374151;
+}
+
+.secondary-btn:hover {
+  background: #dde6f0;
 }
 
 .forgot-buttons {
@@ -120,7 +191,7 @@ button:hover {
   min-height: 18px;
 }
 
-/* chat page center */
+/* chat page */
 .chat-page {
   min-height: 100vh;
   display: flex;
@@ -149,6 +220,12 @@ button:hover {
   padding: 22px 24px;
   border-bottom: 1px solid #e5e7eb;
   background: #fafafa;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .brand-title {
@@ -204,6 +281,30 @@ button:hover {
   white-space: normal;
 }
 
+/* bot formatting */
+.msg-bot p {
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+
+.msg-bot p:last-child {
+  margin-bottom: 0;
+}
+
+.msg-bot ul {
+  margin: 10px 0 0 20px;
+  padding-left: 10px;
+}
+
+.msg-bot li {
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.msg-bot strong {
+  font-weight: 700;
+}
+
 .chat-input {
   display: flex;
   gap: 12px;
@@ -216,18 +317,13 @@ button:hover {
   flex: 1;
   height: 48px;
   padding: 10px 14px;
-  font-size: 16px;
-  border: 1px solid #3b82f6;
+  font-size: 15px;
+  border: 1px solid #d1d5db;
   border-radius: 10px;
-  background: #2a2a2a; /* a slightly lighter background for input */
-  color: #ffffff; /* typing is visible */
+  background: #f9fafb;
+  color: #1f2937;
   outline: none;
   transition: 0.2s ease;
-}
-
-/* placeholder color */
-.chat-input input::placeholder {
-  color: #9ca3af;
 }
 
 .chat-input button {
@@ -289,30 +385,180 @@ button:hover {
   transform: translateY(0);
 }
 
-/* bot message formatting */
-.msg-bot p {
-  margin: 0 0 10px;
-  line-height: 1.5;
+.image-upload-btn {
+  font-size: 22px;
+  cursor: pointer;
+  padding: 0 6px;
+  line-height: 48px;
+  color: #861f41;
+  transition: transform 0.2s;
+  user-select: none;
 }
 
-.msg-bot p:last-child {
-  margin-bottom: 0;
+.image-upload-btn:hover {
+  transform: scale(1.2);
 }
 
-.msg-bot ul {
-  margin: 10px 0 0 20px;
-  padding-left: 10px;
+#imagePreviewWrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.msg-bot li {
+#imagePreview {
+  height: 40px;
+  width: 40px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+}
+
+#clearImage {
+  height: 24px;
+  width: 24px;
+  padding: 0;
+  font-size: 12px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #374151;
+  min-width: unset;
+}
+
+.msg-image {
+  display: block;
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 10px;
   margin-bottom: 6px;
-  line-height: 1.4;
+  object-fit: contain;
 }
 
-.msg-bot strong {
-  font-weight: 700;
+/* dark mode */
+body.dark-mode {
+  background: linear-gradient(135deg, #121212, #1e1e1e);
+  color: #e5e7eb;
 }
 
+body.dark-mode .login-card {
+  background: #1f2937;
+  color: #f3f4f6;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+body.dark-mode .header {
+  color: #f9fafb;
+}
+
+body.dark-mode input[type="text"],
+body.dark-mode input[type="password"] {
+  background: #111827;
+  color: #f9fafb;
+  border: 1px solid #4b5563;
+}
+
+body.dark-mode input[type="text"]::placeholder,
+body.dark-mode input[type="password"]::placeholder {
+  color: #9ca3af;
+}
+
+body.dark-mode input[type="text"]:focus,
+body.dark-mode input[type="password"]:focus {
+  background: #111827;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
+}
+
+body.dark-mode .secondary-btn {
+  background: #374151;
+  color: #f9fafb;
+}
+
+body.dark-mode .secondary-btn:hover {
+  background: #4b5563;
+}
+
+body.dark-mode .forgot-buttons button {
+  background: #374151;
+  color: #f9fafb;
+}
+
+body.dark-mode .forgot-buttons button:hover {
+  background: #4b5563;
+}
+
+body.dark-mode .chat-shell {
+  background: #1f2937;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+body.dark-mode .chat-header {
+  background: #111827;
+  border-bottom: 1px solid #374151;
+}
+
+body.dark-mode .brand-title {
+  color: #f3f4f6;
+}
+
+body.dark-mode .brand-subtitle {
+  color: #9ca3af;
+}
+
+body.dark-mode .chat-messages {
+  background: #111827;
+}
+
+body.dark-mode .msg-bot {
+  background: #1f2937;
+  color: #f3f4f6;
+  border: 1px solid #374151;
+}
+
+body.dark-mode .msg-user {
+  background: #2563eb;
+  color: white;
+}
+
+body.dark-mode .chat-input {
+  background: #111827;
+  border-top: 1px solid #374151;
+}
+
+body.dark-mode .chat-input input {
+  background: #1f2937;
+  color: #f9fafb;
+  border: 1px solid #4b5563;
+}
+
+body.dark-mode .chat-input input::placeholder {
+  color: #9ca3af;
+}
+
+body.dark-mode .logout-btn,
+body.dark-mode .chat-input button {
+  background: #2563eb;
+}
+
+body.dark-mode .logout-btn:hover,
+body.dark-mode .chat-input button:hover {
+  background: #1d4ed8;
+}
+
+body.dark-mode .image-upload-btn {
+  color: #f9fafb;
+}
+
+body.dark-mode #clearImage {
+  background: #374151;
+  color: #f9fafb;
+}
+
+body.dark-mode #imagePreview {
+  border: 1px solid #4b5563;
+}
+body.dark-mode .brand-logo:hover {
+  filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.9));
+}
 /* mobile */
 @media (max-width: 768px) {
   .page-container,
@@ -334,6 +580,21 @@ button:hover {
     padding: 16px;
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .login-header-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .login-header-row .header {
+    text-align: center;
   }
 
   .brand-title {
@@ -361,10 +622,4 @@ button:hover {
   .chat-input button {
     width: 100%;
   }
-}
-
-/* logo */
-.logo {
-  display: block;
-  margin: 0 auto;
 }

@@ -2,20 +2,36 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>University Chatbox</title>
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
+
   <div class="page-container">
     <div class="login-card">
-      <header>
-        <h1 class="header">Welcome To Rowan University Chatbox</h1>
+
+      <!-- HEADER WITH LOGO -->
+      <header class="login-header-row">
+
+        <div class="brand-container">
+          <img src="/logo.png" alt="Rowan Logo" class="brand-logo">
+
+          <h1 class="header">
+            Welcome To Rowan University Chatbox
+          </h1>
+        </div>
+
+        <button type="button" id="themeToggleBtn" class="secondary-btn">
+          Dark Mode
+        </button>
+
       </header>
 
+      <!-- LOGIN SECTION -->
       <div id="Login" class="page">
+
         <form id="loginForm">
           <input type="text" id="email" placeholder="Enter Email" required>
           <input type="password" id="password" placeholder="Enter Password" required>
@@ -33,6 +49,7 @@
         </div>
 
         <p id="forgotMessage" class="error"></p>
+
       </div>
     </div>
   </div>
@@ -43,10 +60,39 @@
     const forgotMessage = document.getElementById("forgotMessage");
     const registerBtn = document.getElementById("registerBtn");
     const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
+    const themeToggleBtn = document.getElementById("themeToggleBtn");
 
     function requireRowanEmail(email) {
       return email.toLowerCase().endsWith("@rowan.edu");
     }
+
+    function applyTheme(theme) {
+      if (theme === "dark") {
+        document.body.classList.add("dark-mode");
+        if (themeToggleBtn) themeToggleBtn.textContent = "Light Mode";
+      } else {
+        document.body.classList.remove("dark-mode");
+        if (themeToggleBtn) themeToggleBtn.textContent = "Dark Mode";
+      }
+
+      localStorage.setItem("theme", theme);
+    }
+
+    function loadSavedTheme() {
+      const savedTheme = localStorage.getItem("theme") || "light";
+      applyTheme(savedTheme);
+    }
+
+    function toggleTheme() {
+      const isDark = document.body.classList.contains("dark-mode");
+      applyTheme(isDark ? "light" : "dark");
+    }
+
+    if (themeToggleBtn) {
+      themeToggleBtn.addEventListener("click", toggleTheme);
+    }
+
+    loadSavedTheme();
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -80,6 +126,7 @@
         localStorage.setItem("access_token", data.access_token);
         localStorage.setItem("user_id", data.user_id);
         localStorage.setItem("username", data.username || email.split("@")[0]);
+        localStorage.setItem("theme", data.theme || "light");
 
         loginError.style.color = "green";
         loginError.textContent = "Login successful!";
@@ -174,5 +221,6 @@
       }
     });
   </script>
+
 </body>
 </html>

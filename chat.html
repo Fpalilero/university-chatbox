@@ -2,40 +2,64 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-
-  <!-- ✅ THIS FIXES MOBILE -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>University Chatbox</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body class="chat-page">
 
   <div class="chat-shell">
+
+    <!-- HEADER -->
     <header class="chat-header">
-      <div>
-        <h1 class="brand-title">University Chatbox</h1>
-        <p class="brand-subtitle" id="welcomeMessage">Welcome back</p>
+
+      <div class="brand-container">
+        <img src="logo.png" alt="Rowan Logo" class="brand-logo">
+
+        <div>
+          <h1 class="brand-title">University Chatbox</h1>
+          <p class="brand-subtitle" id="welcomeMessage">Welcome back</p>
+        </div>
       </div>
-      <button id="logoutBtn" type="button" class="logout-btn">Logout</button>
+
+      <div class="header-actions">
+        <button id="themeToggleBtn" class="secondary-btn">Dark Mode</button>
+        <button id="logoutBtn" class="logout-btn">Logout</button>
+      </div>
+
     </header>
 
-    <main id="chatMessages" class="chat-messages"></main>
+    <!-- CHAT MESSAGES -->
+    <div id="chatMessages" class="chat-messages"></div>
 
+    <!-- IMAGE PREVIEW -->
+    <div id="imagePreviewWrapper" style="display:none;">
+      <img id="imagePreview" src="">
+      <button id="clearImage">X</button>
+    </div>
+
+    <!-- INPUT -->
     <form id="chatForm" class="chat-input">
+
+      <label for="imageInput" class="image-upload-btn">📎</label>
+      <input type="file" id="imageInput" accept="image/*" hidden>
+
       <input
-        id="chatInput"
         type="text"
-        placeholder="Type your message here..."
+        id="chatInput"
+        placeholder="Type your message..."
         autocomplete="off"
-        required
       >
+
       <button type="submit">Send</button>
     </form>
 
-    <p id="chatError" class="error"></p>
+    <div id="chatError" class="error"></div>
+
   </div>
 
-  <script src="/script.js"></script>
+  <script src="script.js"></script>
+
 </body>
 </html>

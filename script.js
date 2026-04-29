@@ -6,6 +6,14 @@ const chatMessages = document.getElementById("chatMessages");
 const chatError = document.getElementById("chatError");
 const logoutBtn = document.getElementById("logoutBtn");
 const welcomeMessage = document.getElementById("welcomeMessage");
+const imageInput = document.getElementById("imageInput");
+const imagePreview = document.getElementById("imagePreview");
+const imagePreviewWrapper = document.getElementById("imagePreviewWrapper");
+const clearImageBtn = document.getElementById("clearImage");
+const themeToggleBtn = document.getElementById("themeToggleBtn");
+
+let pendingImageBase64 = null;
+let pendingImageMediaType = null;
 
 const token = localStorage.getItem("access_token");
 const userId = localStorage.getItem("user_id");
@@ -55,6 +63,65 @@ function setGreeting() {
     `${greeting}! Welcome to Rowan University. How can I assist you today?`;
 }
 
+function applyTheme(theme) {
+  const finalTheme = theme === "dark" ? "dark" : "light";
+
+  if (finalTheme === "dark") {
+    document.body.classList.add("dark-mode");
+    if (themeToggleBtn) themeToggleBtn.textContent = "Light Mode";
+  } else {
+    document.body.classList.remove("dark-mode");
+    if (themeToggleBtn) themeToggleBtn.textContent = "Dark Mode";
+  }
+
+  localStorage.setItem("theme", finalTheme);
+}
+
+async function loadThemeFromBackend() {
+  try {
+    const res = await fetch(`${API_BASE}/api/me/theme`, {
+      method: "GET",
+      headers: authHeaders()
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.details || data.error || "Could not load theme.");
+    }
+
+    applyTheme(data.theme || "light");
+  } catch (error) {
+    applyTheme(localStorage.getItem("theme") || "light");
+  }
+}
+
+async function saveThemeToBackend(theme) {
+  try {
+    const res = await fetch(`${API_BASE}/api/me/theme`, {
+      method: "PUT",
+      headers: authHeaders(),
+      body: JSON.stringify({ theme })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.details || data.error || "Could not save theme.");
+    }
+
+    applyTheme(data.theme || theme);
+  } catch (error) {
+    applyTheme(theme);
+  }
+}
+
+function toggleTheme() {
+  const isDark = document.body.classList.contains("dark-mode");
+  const newTheme = isDark ? "light" : "dark";
+  saveThemeToBackend(newTheme);
+}
+
 function scrollToBottom(smooth = true) {
   chatMessages.scrollTo({
     top: chatMessages.scrollHeight,
@@ -73,11 +140,14 @@ function formatMessage(text) {
 
   let safe = escapeHtml(text);
 
-  // Bold support: **text**
+  // bold: **text**
   safe = safe.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
 
-  // Split into lines
-  const lines = safe.split("\n").map(line => line.trim()).filter(line => line !== "");
+  // split lines
+  const lines = safe
+    .split("\n")
+    .map(line => line.trim())
+    .filter(line => line !== "");
 
   if (lines.length === 0) {
     return safe;
@@ -87,9 +157,7 @@ function formatMessage(text) {
   let inList = false;
 
   for (const line of lines) {
-    const isBullet =
-      line.startsWith("- ") ||
-      line.startsWith("* ");
+    const isBullet = line.startsWith("- ") || line.startsWith("* ");
 
     if (isBullet) {
       if (!inList) {
@@ -110,7 +178,8 @@ function formatMessage(text) {
     html += "</ul>";
   }
 
-  // Fallback: if AI sends * bullet * bullet in one long line
+  // fallback for single-line AI bullet dumps like:
+  // "text * item * item"
   if (!html.includes("<ul>") && safe.includes(" * ")) {
     const parts = safe.split(" * ").map(part => part.trim()).filter(Boolean);
     if (parts.length > 1) {
@@ -126,7 +195,7 @@ function formatMessage(text) {
   return html;
 }
 
-function addMessage(role, text, animated = true) {
+function addMessage(role, text, animated = true, imageDataUrl = null) {
   const bubble = document.createElement("div");
   bubble.className = role === "user" ? "msg msg-user" : "msg msg-bot";
 
@@ -134,10 +203,23 @@ function addMessage(role, text, animated = true) {
     bubble.classList.add("msg-enter");
   }
 
-  if (role === "bot") {
-    bubble.innerHTML = formatMessage(text);
-  } else {
-    bubble.textContent = text;
+  if (imageDataUrl) {
+    const img = document.createElement("img");
+    img.src = imageDataUrl;
+    img.className = "msg-image";
+    bubble.appendChild(img);
+  }
+
+  if (text) {
+    if (role === "bot") {
+      const textNode = document.createElement("div");
+      textNode.innerHTML = formatMessage(text);
+      bubble.appendChild(textNode);
+    } else {
+      const textNode = document.createElement("span");
+      textNode.textContent = text;
+      bubble.appendChild(textNode);
+    }
   }
 
   chatMessages.appendChild(bubble);
@@ -283,13 +365,15 @@ async function loadMessages() {
   }
 }
 
-async function sendMessage(messageText) {
+async function sendMessage(messageText, imageBase64 = null, imageMediaType = null) {
   const res = await fetch(`${API_BASE}/api/messages`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify({
       conversation_id: conversationId,
-      content: messageText
+      content: messageText,
+      image_base64: imageBase64,
+      image_media_type: imageMediaType
     })
   });
 
@@ -297,7 +381,7 @@ async function sendMessage(messageText) {
   if (!contentType.includes("application/json")) {
     const text = await res.text();
     console.error("Send message non-JSON response:", text);
-    throw new Error("Server returned HTML instead of JSON. Check Render logs.");
+    throw new Error("Server returned HTML instead of JSON. Check logs.");
   }
 
   const data = await res.json();
@@ -310,26 +394,70 @@ async function sendMessage(messageText) {
   return data;
 }
 
+imageInput.addEventListener("change", () => {
+  const file = imageInput.files[0];
+  if (!file) return;
+
+  if (file.size > 4 * 1024 * 1024) {
+    chatError.textContent = "Image must be under 4MB.";
+    imageInput.value = "";
+    return;
+  }
+
+  pendingImageMediaType = file.type;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    pendingImageBase64 = dataUrl.split(",")[1];
+    imagePreview.src = dataUrl;
+    imagePreviewWrapper.style.display = "flex";
+  };
+  reader.readAsDataURL(file);
+});
+
+clearImageBtn.addEventListener("click", () => {
+  pendingImageBase64 = null;
+  pendingImageMediaType = null;
+  imageInput.value = "";
+  imagePreviewWrapper.style.display = "none";
+  imagePreview.src = "";
+});
+
+if (themeToggleBtn) {
+  themeToggleBtn.addEventListener("click", toggleTheme);
+}
+
 chatForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   chatError.textContent = "";
 
   const msg = chatInput.value.trim();
-  if (!msg) return;
+  const imgBase64 = pendingImageBase64;
+  const imgType = pendingImageMediaType;
+  const imgPreviewUrl = imagePreview.src || null;
+
+  if (!msg && !imgBase64) return;
 
   if (!conversationId) {
     chatError.textContent = "No conversation loaded yet. Refresh the page.";
     return;
   }
 
-  addMessage("user", msg, true);
+  addMessage("user", msg, true, imgBase64 ? imgPreviewUrl : null);
   chatInput.value = "";
-  chatInput.disabled = true;
 
+  pendingImageBase64 = null;
+  pendingImageMediaType = null;
+  imageInput.value = "";
+  imagePreviewWrapper.style.display = "none";
+  imagePreview.src = "";
+
+  chatInput.disabled = true;
   createTypingIndicator();
 
   try {
-    const data = await sendMessage(msg);
+    const data = await sendMessage(msg, imgBase64, imgType);
 
     await sleep(700);
     removeTypingIndicator();
@@ -347,11 +475,14 @@ chatForm.addEventListener("submit", async (e) => {
 });
 
 logoutBtn.addEventListener("click", () => {
-  localStorage.clear();
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("user_id");
+  localStorage.removeItem("username");
   window.location.href = "/";
 });
 
 (async function init() {
+  await loadThemeFromBackend();
   setGreeting();
   conversationId = await getOrCreateConversation();
 

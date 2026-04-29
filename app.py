@@ -11,7 +11,7 @@ from flask_jwt_extended import (
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 from groq import Groq
-from sqlalchemy import or_
+from sqlalchemy import or_, inspect, text
 
 from models import db, User, Conversation, ConversationMember, Message
 
@@ -21,15 +21,14 @@ load_dotenv()
 def create_app():
     app = Flask(__name__)
     CORS(app)
-    
-    # Validate required environment variables
+
     groq_api_key = os.getenv("GROQ_API_KEY")
     if not groq_api_key:
-        print("="*70)
+        print("=" * 70)
         print("WARNING: GROQ_API_KEY environment variable is not set!")
         print("The chatbot will not be able to generate AI responses.")
         print("Please set GROQ_API_KEY in your .env file or environment.")
-        print("="*70)
+        print("=" * 70)
 
     database_url = os.getenv("DATABASE_URL", "sqlite:///chatbox.db")
     if database_url.startswith("postgres://"):
@@ -45,7 +44,23 @@ def create_app():
     with app.app_context():
         db.create_all()
 
-    groq_api_key = os.getenv("GROQ_API_KEY")
+        # Safe theme-column migration for existing DBs
+        try:
+            inspector = inspect(db.engine)
+            table_names = inspector.get_table_names()
+
+            if "users" in table_names:
+                columns = [col["name"] for col in inspector.get_columns("users")]
+                if "theme" not in columns:
+                    db.session.execute(text(
+                        "ALTER TABLE users ADD COLUMN theme VARCHAR(10) NOT NULL DEFAULT 'light'"
+                    ))
+                    db.session.commit()
+                    print("Added theme column to users table.")
+        except Exception as e:
+            db.session.rollback()
+            print("THEME COLUMN CHECK ERROR:", str(e))
+
     groq_client = Groq(api_key=groq_api_key) if groq_api_key else None
 
     @app.get("/")
@@ -71,6 +86,10 @@ def create_app():
     @app.get("/script.js")
     def serve_js():
         return send_from_directory(os.getcwd(), "script.js")
+    
+    @app.get("/logo.png")
+    def serve_logo():
+        return send_from_directory(os.getcwd(), "logo.png")
 
     @app.get("/favicon.ico")
     def favicon():
@@ -82,12 +101,50 @@ def create_app():
     def utcnow():
         return datetime.now(timezone.utc)
 
+    def normalize_theme(value: str) -> str:
+        value = (value or "").strip().lower()
+        return value if value in ("light", "dark") else "light"
+
     def is_member(user_id: int, conversation_id: int) -> bool:
         return (
             db.session.query(ConversationMember)
             .filter_by(user_id=user_id, conversation_id=conversation_id)
             .first()
             is not None
+        )
+
+    def asks_about_other_university(user_message: str) -> bool:
+        lowered = (user_message or "").lower()
+
+        other_school_keywords = [
+            "rutgers",
+            "temple",
+            "penn state",
+            "drexel",
+            "njit",
+            "stockton",
+            "tcnj",
+            "princeton",
+            "monmouth",
+            "seton hall",
+            "kean",
+            "rowan college at burlington county",
+            "rcbc",
+            "camden county college",
+            "ccc",
+            "harvard",
+            "yale",
+            "stanford",
+            "mit",
+            "nyu"
+        ]
+
+        return any(keyword in lowered for keyword in other_school_keywords)
+
+    def redirect_to_rowan_response() -> str:
+        return (
+            "I’m here to help with Rowan University questions. "
+            "I can help with Rowan admissions, registration, advising, financial aid, billing, transcripts, and other Rowan student services."
         )
 
     def get_or_create_rowan_bot():
@@ -115,6 +172,11 @@ def create_app():
                         existing_bot.email = bot_email
                         changed = True
 
+                current_theme = getattr(existing_bot, "theme", None)
+                if current_theme not in ("light", "dark"):
+                    existing_bot.theme = "light"
+                    changed = True
+
                 if changed:
                     db.session.commit()
 
@@ -123,7 +185,8 @@ def create_app():
             bot = User(
                 username=bot_username,
                 email=bot_email,
-                password_hash=generate_password_hash("rowan-bot-internal")
+                password_hash=generate_password_hash("rowan-bot-internal"),
+                theme="light"
             )
             db.session.add(bot)
             db.session.commit()
@@ -163,41 +226,12 @@ def create_app():
 
         return history
 
-    def asks_about_other_university(user_message: str) -> bool:
-        lowered = user_message.lower()
-
-        other_school_keywords = [
-            "rutgers",
-            "temple",
-            "penn state",
-            "drexel",
-            "njit",
-            "stockton",
-            "tcnj",
-            "princeton",
-            "monmouth",
-            "seton hall",
-            "kean",
-            "rowan college at burlington county",
-            "rcbc",
-            "camden county college",
-            "ccc",
-            "harvard",
-            "yale",
-            "stanford",
-            "mit",
-            "nyu"
-        ]
-
-        return any(keyword in lowered for keyword in other_school_keywords)
-
-    def redirect_to_rowan_response() -> str:
-        return (
-            "I’m here to help with Rowan University questions. "
-            "I can help with Rowan admissions, registration, advising, financial aid, billing, transcripts, and other Rowan student services."
-        )
-
-    def generate_rowan_reply(user_message: str, conversation_id: int) -> str:
+    def generate_rowan_reply(
+        user_message: str,
+        conversation_id: int,
+        image_base64: str = None,
+        image_media_type: str = None
+    ) -> str:
         if not groq_client:
             return "Groq is not connected yet. Please add your GROQ_API_KEY in Render environment variables."
 
@@ -224,13 +258,31 @@ def create_app():
             "If you are unsure about a Rowan-specific fact, say you are not sure instead of making it up."
         )
 
+        if image_base64 and image_media_type:
+            user_content = [
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:{image_media_type};base64,{image_base64}"
+                    }
+                },
+                {
+                    "type": "text",
+                    "text": user_message if user_message else "What is in this image?"
+                }
+            ]
+            model = "meta-llama/llama-4-scout-17b-16e-instruct"
+        else:
+            user_content = user_message
+            model = "llama-3.1-8b-instant"
+
         try:
             completion = groq_client.chat.completions.create(
-                model="llama-3.1-8b-instant",
+                model=model,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     *history,
-                    {"role": "user", "content": user_message}
+                    {"role": "user", "content": user_content}
                 ],
                 temperature=0.5,
                 max_completion_tokens=300
@@ -270,11 +322,16 @@ def create_app():
                 username=username,
                 email=email,
                 password_hash=generate_password_hash(password),
+                theme="light"
             )
             db.session.add(user)
             db.session.commit()
 
-            return jsonify({"message": "registered", "user_id": user.id}), 201
+            return jsonify({
+                "message": "registered",
+                "user_id": user.id,
+                "theme": user.theme
+            }), 201
 
         except Exception as e:
             db.session.rollback()
@@ -292,14 +349,19 @@ def create_app():
             if not user or not check_password_hash(user.password_hash, password):
                 return jsonify({"error": "invalid credentials"}), 401
 
+            user.theme = normalize_theme(getattr(user, "theme", "light"))
+            db.session.commit()
+
             token = create_access_token(identity=str(user.id), expires_delta=timedelta(hours=8))
             return jsonify({
                 "access_token": token,
                 "user_id": user.id,
-                "username": user.username
+                "username": user.username,
+                "theme": user.theme
             })
 
         except Exception as e:
+            db.session.rollback()
             print("LOGIN ERROR:", str(e))
             return jsonify({"error": "login_failed", "details": str(e)}), 500
 
@@ -358,6 +420,52 @@ def create_app():
             db.session.rollback()
             print("RESET PASSWORD ERROR:", str(e))
             return jsonify({"error": "reset_failed", "details": str(e)}), 500
+
+    @app.get("/api/me/theme")
+    @jwt_required()
+    def get_my_theme():
+        try:
+            user_id = int(get_jwt_identity())
+            user = User.query.get(user_id)
+
+            if not user:
+                return jsonify({"error": "user not found"}), 404
+
+            user.theme = normalize_theme(getattr(user, "theme", "light"))
+            db.session.commit()
+
+            return jsonify({"theme": user.theme}), 200
+
+        except Exception as e:
+            db.session.rollback()
+            print("GET THEME ERROR:", str(e))
+            return jsonify({"error": "get_theme_failed", "details": str(e)}), 500
+
+    @app.put("/api/me/theme")
+    @jwt_required()
+    def update_my_theme():
+        try:
+            user_id = int(get_jwt_identity())
+            user = User.query.get(user_id)
+
+            if not user:
+                return jsonify({"error": "user not found"}), 404
+
+            data = request.get_json(silent=True) or {}
+            theme = normalize_theme(data.get("theme"))
+
+            user.theme = theme
+            db.session.commit()
+
+            return jsonify({
+                "message": "theme updated",
+                "theme": user.theme
+            }), 200
+
+        except Exception as e:
+            db.session.rollback()
+            print("UPDATE THEME ERROR:", str(e))
+            return jsonify({"error": "update_theme_failed", "details": str(e)}), 500
 
     # -------------------------
     # Conversations
@@ -473,9 +581,11 @@ def create_app():
 
             conversation_id = data.get("conversation_id")
             content = (data.get("content") or "").strip()
+            image_base64 = data.get("image_base64")
+            image_media_type = data.get("image_media_type")
 
-            if not conversation_id or not content:
-                return jsonify({"error": "conversation_id and content are required"}), 400
+            if not conversation_id or (not content and not image_base64):
+                return jsonify({"error": "conversation_id and content or image are required"}), 400
 
             conversation_id = int(conversation_id)
 
@@ -485,7 +595,7 @@ def create_app():
             user_msg = Message(
                 conversation_id=conversation_id,
                 sender_user_id=user_id,
-                content=content,
+                content=content or "[Image]",
             )
             db.session.add(user_msg)
             db.session.commit()
@@ -497,7 +607,12 @@ def create_app():
                     "details": "Could not create or load RowanBot user."
                 }), 500
 
-            ai_reply = generate_rowan_reply(content, conversation_id)
+            ai_reply = generate_rowan_reply(
+                content,
+                conversation_id,
+                image_base64,
+                image_media_type
+            )
 
             bot_msg = Message(
                 conversation_id=conversation_id,
