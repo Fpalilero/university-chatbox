@@ -42,3 +42,27 @@ Deployment:
 - Handled database migration from SQLite to PostgreSQL
 - Fixed UI/UX issues (input visibility, mobile responsiveness)
 - Improved chatbot to stay focused on Rowan University topics only
+
+🏗️ Architecture
+The application follows a client-server architecture:
+
+┌─────────────────┐
+│  Frontend (SPA) │
+│  - index.html   │  ← Login/Registration
+│  - chat.html    │  ← Chat Interface
+│  - script.js    │  ← Chat Logic
+│  - style.css    │  ← Styling
+└────────┬────────┘
+         │ HTTP/REST
+         ▼
+┌─────────────────┐
+│  Flask Backend  │
+│  - app.py       │  ← API Routes & Business Logic
+│  - models.py    │  ← Database Models
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐     ┌─────────────┐
+│   PostgreSQL    │     │  Groq API   │
+│   (Database)    │     │  (AI Model) │
+└─────────────────┘     └─────────────┘
