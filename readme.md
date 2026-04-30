@@ -43,29 +43,24 @@ Deployment:
 - Fixed UI/UX issues (input visibility, mobile responsiveness)
 - Improved chatbot to stay focused on Rowan University topics only
 
-🏗️ Architecture
+## 🏗️ Architecture
+
 The application follows a client-server architecture:
 
-┌─────────────────┐
-│  Frontend (SPA) │
-│  - index.html   │  ← Login/Registration
-│  - chat.html    │  ← Chat Interface
-│  - script.js    │  ← Chat Logic
-│  - style.css    │  ← Styling
-└────────┬────────┘
-         │ HTTP/REST
-         ▼
-┌─────────────────┐
-│  Flask Backend  │
-│  - app.py       │  ← API Routes & Business Logic
-│  - models.py    │  ← Database Models
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐     ┌─────────────┐
-│   PostgreSQL    │     │  Groq API   │
-│   (Database)    │     │  (AI Model) │
-└─────────────────┘     └─────────────┘
+Frontend (SPA)
+- index.html → Login & Registration
+- chat.html → Chat Interface
+- script.js → Client-side logic
+- style.css → UI styling
+
+Backend (Flask API)
+- app.py → Routes & business logic
+- models.py → Database schema
+
+Services
+- PostgreSQL → Persistent storage
+- Groq API → AI-powered responses
+
 🚀 Setup Instructions
 Prerequisites
 Python 3.8 or higher
@@ -117,6 +112,7 @@ The application will start on http://localhost:5001
 
 Production Mode (with Gunicorn)
 gunicorn 'app:create_app()'
+
 🌐 Deployment
 The application is designed to be deployed on platforms like Render, Heroku, or any platform supporting Python web apps.
 
